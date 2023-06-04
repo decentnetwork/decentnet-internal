@@ -1,0 +1,11 @@
+[package]
+name = "decentnet-manifest"
+version = "0.0.1"
+edition = {workspace = true}
+license = "MIT OR Apache-2.0"
+
+
+[dependencies]
+serde = { workspace = true, features = ["derive"] }
+toml = { workspace = true }
+chrono = { workspace = true }

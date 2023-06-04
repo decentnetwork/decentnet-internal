@@ -1,0 +1,19 @@
+[workspace]
+members = [
+    "manifest",
+]
+
+[workspace.package]
+authors = ["DecentNet <decentnet.dev>"]
+edition = "2021"
+homepage = "https://decentnet.dev"
+publish = false
+readme = "README.md"
+repository = "https://github.com/decentnet/decentnet"
+rust-version = "1.70"
+
+[workspace.dependencies]
+decentnet-manifest = { path = "manifest" }
+serde = "1.0"
+toml = "0.7"
+chrono = {version = "0.4.24", features = ["serde"]}

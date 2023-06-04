@@ -1,0 +1,26 @@
+hash = ""
+sign = ""
+
+[[files]]
+path = "index.md"
+modified = "2019-12-31T00:00:00Z"
+size = 0
+hash = ""
+
+[[files]]
+path = "blog.md"
+modified = "2020-01-01T00:00:00Z"
+size = 0
+hash = ""
+
+[[files_optional]]
+path = "video.mp4"
+modified = "2020-01-01T00:00:00Z"
+size = 0
+hash = ""
+
+[[files_optional]]
+path = "image.png"
+modified = "2020-01-01T00:00:00Z"
+size = 0
+hash = ""
