@@ -1,5 +1,5 @@
-hash = ""
-sign = ""
+hash = ""                                       # Hash Generated from Files Manifest Content
+sign = ""                                       # Signature of Hash Bytes
 
 [[files]]
 path = "index.md"
