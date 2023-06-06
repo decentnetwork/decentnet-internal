@@ -9,3 +9,9 @@ license = "MIT OR Apache-2.0"
 serde = { workspace = true, features = ["derive"] }
 toml = { workspace = true }
 chrono = { workspace = true }
+
+serde_with = { workspace = true }
+multihash = { workspace = true }
+hex = "0.4.3"
+bs58 = "0.4.0"
+cid = "0.10.1"
