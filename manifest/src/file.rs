@@ -38,7 +38,10 @@ pub struct PodFile {
 
 #[cfg(test)]
 mod tests {
-    use std::{fs::File, io::read_to_string};
+    use std::{
+        fs::File,
+        io::{read_to_string, Write},
+    };
 
     use crate::file::PodFileRoot;
 
@@ -48,5 +51,16 @@ mod tests {
         let content = read_to_string(file).unwrap();
         let pod_file = PodFileRoot::from_string(&content);
         assert!(pod_file.is_some());
+    }
+
+    #[test]
+    fn test_serialize() {
+        let file = File::open("tests/files.toml").unwrap();
+        let content = read_to_string(file).unwrap();
+        let pod_file = PodFileRoot::from_string(&content).unwrap();
+        let content = toml::to_string(&pod_file).unwrap();
+        //save to file
+        let mut file = File::create("tests/files2.toml").unwrap();
+        file.write_all(content.as_bytes()).unwrap();
     }
 }

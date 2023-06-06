@@ -1,0 +1,52 @@
+[files]
+manifest = "files.toml"                                 # Separate manifest for files, Default: files.toml
+size = 256021                                           # Size of files.toml
+hash = ""                                               # hash of files.toml
+modified = "2019-12-31T00:00:00Z"                       # Last modified time of files.toml
+
+[signature]
+root_sign = ""                                          # Root signature of all signers
+signs_required = 1                                      # Number of signatures required
+signers = [ "15UYrA7aXr2Nto1Gg4yWXpY3EAJwafMTNk",       # Signers
+            "1HeLLo4uzjaLetFx6NH3PMwFP3qbRbTf3D" ]      # Can omit this sign since we need only one signature required
+
+[signature."15UYrA7aXr2Nto1Gg4yWXpY3EAJwafMTNk"]
+sign = ""                                               # Signature of 1HeLLo4uzjaLetFx6NH3PMwFP3qbRbTf3D
+instant = "2023-01-01T00:00:00Z"                        # Date of signature
+
+[extensions.internal]                                   # internal manifests
+path = "data/manifest.toml"                             # path to internal manifest
+
+[extensions.external]                                   # external manifests like merger sites
+
+[meta]                                                  # meta table and it's subtables are optional   
+ignore = ""                                             # ignore files and folders for source control
+
+[meta.prev]
+modified = "2023-01-01T00:00:00Z"                       # tiny source control for safer updates can be extended to full git
+sign = ""                                               # signature of previous manifest
+hash = ""                                               # hash of previous manifest
+
+[meta.client]                                           # client specific meta data
+version = "0.0.1"
+platform = "linux"
+language = "en"
+
+# If below meta is optional, Where can it be stored? DecentNet is not domain based,
+# thus signers lies in seperate fields. To provide discoverability, 
+# we need this meta. Address of pod must be one of the signers.
+# Since signers are isolated from this meta, we can consider pods without this meta as local pods.
+[meta.pod]                                              # pod specific meta data
+address = "15UYrA7aXr2Nto1Gg4yWXpY3EAJwafMTNk"          # address of pod
+address_index = 6993755                                 # index of address
+description = "Decentralized Forum from ZeroNetX Team." # description of pod
+background-color = "#F5F5F5"                            # background color of pod
+background-color-dark = "#2e2b32"                       # dark background color of pod
+domain = "ThreadIt.bit"                                 # domain of pod
+
+[meta.pod.parent]
+address = "15UYrA7aXr2Nto1Gg4yWXpY3EAJwafMTNk"          # address of parent pod
+template_root = ""                                      # root of template                                
+allow_cloning = true                                    # allow cloning of pod          
+
+
