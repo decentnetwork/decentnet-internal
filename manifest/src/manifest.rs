@@ -5,8 +5,9 @@ use serde::{Deserialize, Serialize};
 pub struct PubManifest {
     pub files: PodManifestFiles,
     pub signature: PodManifestSignature,
-    pub extensions: PodManifestExtension,
-    pub meta: PodManifestMeta,
+    pub signatures: Vec<PodManifestSigns>,
+    pub extensions: Option<PodManifestExtension>,
+    pub meta: Option<PodManifestMeta>,
 }
 
 impl PubManifest {
@@ -45,11 +46,12 @@ pub struct PodManifestSignature {
 }
 
 #[derive(Debug, PartialEq, PartialOrd, Eq, Ord, Serialize, Deserialize)]
-pub struct PodManifestSigner {
+pub struct PodManifestSigns {
     /// Address of signer
     pub address: String,
     /// Signature of signer
     pub sign: String,
+    /// Date of signature
     pub instant: DateTime<Utc>,
 }
 
@@ -96,6 +98,10 @@ pub struct PodManifestMetaClient {
 }
 
 /// pod specific meta data
+/// If below meta is optional, Where can it be stored? DecentNet is not domain based,
+/// thus signers lies in seperate fields. To provide discoverability,
+/// we need this meta. Address of pod must be one of the signers.
+/// Since signers are isolated from this meta, we can consider pods without this meta as local pods.
 #[derive(Debug, PartialEq, PartialOrd, Eq, Ord, Serialize, Deserialize)]
 pub struct PodManifestMetaPod {
     /// address of pod
