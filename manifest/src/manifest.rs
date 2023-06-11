@@ -4,6 +4,19 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, PartialEq, PartialOrd, Eq, Ord, Serialize, Deserialize)]
 pub struct PubManifest {
     pub files: PodManifestFiles,
+    pub signature: PodManifestSignature,
+    pub extension: PodManifestExtension,
+    pub meta: PodManifestMeta,
+}
+
+impl PubManifest {
+    pub fn from_string(content: &str) -> Option<Self> {
+        if let Ok(file) = toml::from_str::<PubManifest>(content) {
+            Some(file)
+        } else {
+            None
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, PartialOrd, Eq, Ord, Serialize, Deserialize)]
@@ -112,18 +125,33 @@ pub struct PodManifestMetaPodParent {
 
 #[cfg(test)]
 mod tests {
-    use std::{fs::File, io::read_to_string};
+    use std::{
+        fs::File,
+        io::{read_to_string, Write},
+    };
+
+    use super::PubManifest;
 
     #[test]
-    fn test_manifest() {
+    fn test_manifest_deserialize() {
         let file = File::open("tests/manifest.toml").unwrap();
         let content = read_to_string(file).unwrap();
-        // println!("{}", content);
 
-        let parsed_raw = toml::from_str::<toml::Table>(&content).unwrap();
+        let manifest_file = PubManifest::from_string(&content);
 
-        print!("{:#?}", parsed_raw);
+        assert!(manifest_file.is_some());
+    }
 
-        // print!("{:#?}", parsed);
+    #[test]
+    fn test_manifest_serialize() {
+        let manifest = File::open("tests/manifest.toml").unwrap();
+        let content = read_to_string(manifest).unwrap();
+
+        let manifest_file = PubManifest::from_string(&content).unwrap();
+        let content = toml::to_string(&manifest_file).unwrap();
+
+        // save to file
+        let mut file = File::create("tests/manifest2.toml").unwrap();
+        file.write_all(content.as_bytes()).unwrap();
     }
 }
