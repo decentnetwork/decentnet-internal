@@ -73,10 +73,10 @@ pub struct PodManifestExtensionExternal {}
 
 #[derive(Debug, PartialEq, PartialOrd, Eq, Ord, Serialize, Deserialize)]
 pub struct PodManifestMeta {
-    pub ignore: String,
-    pub prev: PodManifestMetaPrev,
-    pub client: PodManifestMetaClient,
-    pub pod: PodManifestMetaPod,
+    pub ignore: Option<String>,
+    pub prev: Option<PodManifestMetaPrev>,
+    pub client: Option<PodManifestMetaClient>,
+    pub pod: Option<PodManifestMetaPod>,
 }
 
 #[derive(Debug, PartialEq, PartialOrd, Eq, Ord, Serialize, Deserialize)]
@@ -102,6 +102,7 @@ pub struct PodManifestMetaClient {
 /// thus signers lies in seperate fields. To provide discoverability,
 /// we need this meta. Address of pod must be one of the signers.
 /// Since signers are isolated from this meta, we can consider pods without this meta as local pods.
+/// TODO! Move ZeroNet specific fields to meta.legacy
 #[derive(Debug, PartialEq, PartialOrd, Eq, Ord, Serialize, Deserialize)]
 pub struct PodManifestMetaPod {
     /// address of pod
@@ -118,7 +119,7 @@ pub struct PodManifestMetaPod {
     pub background_color_dark: String,
     /// domain of pod
     pub domain: String,
-    pub parent: PodManifestMetaPodParent,
+    pub parent: Option<PodManifestMetaPodParent>,
 }
 
 #[derive(Debug, PartialEq, PartialOrd, Eq, Ord, Serialize, Deserialize)]
