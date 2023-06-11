@@ -33,7 +33,7 @@ version = "0.0.1"
 platform = "linux"
 language = "en"
 
-# If below meta is optional, Where can it be stored? DecentNet is not domain based,
+# If below meta is optional, Where can this pod be stored? DecentNet is not limited to domain based system,
 # thus signers lies in seperate fields. To provide discoverability, 
 # we need this meta. Address of pod must be one of the signers.
 # Since signers are isolated from this meta, we can consider pods without this meta as local pods.
