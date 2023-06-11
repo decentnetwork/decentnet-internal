@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 pub struct PubManifest {
     pub files: PodManifestFiles,
     pub signature: PodManifestSignature,
-    pub extension: PodManifestExtension,
+    pub extensions: PodManifestExtension,
     pub meta: PodManifestMeta,
 }
 
@@ -41,7 +41,7 @@ pub struct PodManifestSignature {
     pub signs_required: usize,
     /// List of Signers for this manifest
     /// Can omit this sign in manifest.toml since we need only one signature required
-    pub signs: Vec<String>,
+    pub signers: Vec<String>,
 }
 
 #[derive(Debug, PartialEq, PartialOrd, Eq, Ord, Serialize, Deserialize)]
@@ -75,7 +75,6 @@ pub struct PodManifestMeta {
     pub prev: PodManifestMetaPrev,
     pub client: PodManifestMetaClient,
     pub pod: PodManifestMetaPod,
-    pub pod_parent: PodManifestMetaPodParent,
 }
 
 #[derive(Debug, PartialEq, PartialOrd, Eq, Ord, Serialize, Deserialize)]
@@ -106,11 +105,14 @@ pub struct PodManifestMetaPod {
     /// description of pod
     pub description: String,
     /// background color of pod
+    #[serde(rename = "background-color")]
     pub background_color: String,
     /// dark background color of pod
+    #[serde(rename = "background-color-dark")]
     pub background_color_dark: String,
     /// domain of pod
     pub domain: String,
+    pub parent: PodManifestMetaPodParent,
 }
 
 #[derive(Debug, PartialEq, PartialOrd, Eq, Ord, Serialize, Deserialize)]
