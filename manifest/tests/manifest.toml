@@ -9,9 +9,10 @@ primary = "15UYrA7aXr2Nto1Gg4yWXpY3EAJwafMTNk"          # Primary signer of mani
 root_sign = ""                                          # Root signature of all signers, can only be signed by primary signer
 signs_required = 1                                      # Number of signatures required to consider manifest changes to be valid
 signers = [ "15UYrA7aXr2Nto1Gg4yWXpY3EAJwafMTNk",       # List of Signers for this manifest
-            "1HeLLo4uzjaLetFx6NH3PMwFP3qbRbTf3D" ]      # Can omit this sign in manifest.toml since we need only one signature required
+            "1HeLLo4uzjaLetFx6NH3PMwFP3qbRbTf3D" ]      # Can omit this sign of this signer in manifest.toml since we need only one signature required
 
-[signature."15UYrA7aXr2Nto1Gg4yWXpY3EAJwafMTNk"]
+[[signatures]]
+address = "15UYrA7aXr2Nto1Gg4yWXpY3EAJwafMTNk"          # Address of signer, This is optional 'cause we can recover it from signature
 sign = ""                                               # Signature of 1HeLLo4uzjaLetFx6NH3PMwFP3qbRbTf3D
 instant = "2023-01-01T00:00:00Z"                        # Date of signature
 
