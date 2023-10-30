@@ -1,7 +1,6 @@
 [workspace]
-members = [
-    "manifest",
-]
+members = ["manifest"]
+resolver = "2"
 
 [workspace.package]
 authors = ["DecentNet <decentnet.dev>"]
@@ -14,9 +13,9 @@ rust-version = "1.70"
 
 [workspace.dependencies]
 decentnet-manifest = { path = "manifest" }
-serde = "1.0"
-toml = "0.7"
-chrono = {version = "0.4.24", features = ["serde"]}
-
-serde_with = {version = "3.0.0", features = ["chrono_0_4"]}
-multihash = "0.18.1"
+serde = "1.0.189"
+toml = "0.8.2"
+chrono = { version = "0.4.24", features = ["serde"] }
+serde_with = { version = "3.0.0", features = ["chrono_0_4"] }
+multihash = "0.19.1"
+cid = "0.10.1"
