@@ -16,5 +16,5 @@ rust-version = "1.70"
 [workspace.dependencies]
 decentnet-manifest = { path = "manifest" }
 serde = "1.0"
-toml = "0.7"
+toml = "0.8.6"
 chrono = {version = "0.4.24", features = ["serde"]}
