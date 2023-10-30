@@ -13,3 +13,7 @@ chrono = { workspace = true }
 serde_with = { workspace = true }
 multihash = { workspace = true }
 cid = { workspace = true }
+
+bitcoin = { workspace = true, features = ["rand"] }
+rand = { workspace = true }
+frost-secp256k1 = { workspace = true }

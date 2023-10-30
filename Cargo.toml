@@ -19,3 +19,6 @@ chrono = { version = "0.4.24", features = ["serde"] }
 serde_with = { version = "3.0.0", features = ["chrono_0_4"] }
 multihash = "0.19.1"
 cid = "0.10.1"
+bitcoin = { version = "0.31.0" }
+rand = "0.8.5"
+frost-secp256k1 = "0.7.0"
