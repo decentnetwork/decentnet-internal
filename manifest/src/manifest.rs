@@ -160,7 +160,7 @@ mod tests {
         let content = toml::to_string(&manifest_file).unwrap();
 
         // save to file
-        let mut file = File::create("tests/manifest2.toml").unwrap();
+        let mut file = File::create("tests/tmp/manifest.toml").unwrap();
         file.write_all(content.as_bytes()).unwrap();
     }
 }

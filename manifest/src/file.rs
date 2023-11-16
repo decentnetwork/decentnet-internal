@@ -60,7 +60,7 @@ mod tests {
         let pod_file = PodFileRoot::from_string(&content).unwrap();
         let content = toml::to_string(&pod_file).unwrap();
         //save to file
-        let mut file = File::create("tests/files2.toml").unwrap();
+        let mut file = File::create("tests/tmp/files.toml").unwrap();
         file.write_all(content.as_bytes()).unwrap();
     }
 }
