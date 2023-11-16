@@ -2,7 +2,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, PartialOrd, Eq, Ord, Serialize, Deserialize)]
-pub struct PubManifest {
+pub struct PodManifest {
     pub files: PodManifestFiles,
     pub signature: PodManifestSignature,
     pub signatures: Vec<PodManifestSigns>,
@@ -10,9 +10,9 @@ pub struct PubManifest {
     pub meta: Option<PodManifestMeta>,
 }
 
-impl PubManifest {
+impl PodManifest {
     pub fn from_string(content: &str) -> Option<Self> {
-        if let Ok(file) = toml::from_str::<PubManifest>(content) {
+        if let Ok(file) = toml::from_str::<PodManifest>(content) {
             Some(file)
         } else {
             None
@@ -139,14 +139,14 @@ mod tests {
         io::{read_to_string, Write},
     };
 
-    use super::PubManifest;
+    use super::PodManifest;
 
     #[test]
     fn test_manifest_deserialize() {
         let file = File::open("tests/manifest.toml").unwrap();
         let content = read_to_string(file).unwrap();
 
-        let manifest_file = PubManifest::from_string(&content);
+        let manifest_file = PodManifest::from_string(&content);
 
         assert!(manifest_file.is_some());
     }
@@ -156,7 +156,7 @@ mod tests {
         let manifest = File::open("tests/manifest.toml").unwrap();
         let content = read_to_string(manifest).unwrap();
 
-        let manifest_file = PubManifest::from_string(&content).unwrap();
+        let manifest_file = PodManifest::from_string(&content).unwrap();
         let content = toml::to_string(&manifest_file).unwrap();
 
         // save to file
