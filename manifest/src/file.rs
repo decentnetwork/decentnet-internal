@@ -1,16 +1,18 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, PartialOrd, Eq, Ord)]
+#[derive(Default, Debug, Serialize, Deserialize, PartialEq, PartialOrd, Eq, Ord)]
 pub struct PodFileRoot {
     /// Root Hash of all files
-    hash: String,
+    pub hash: String,
     /// Sign of this file content
-    sign: String,
+    pub sign: String,
     /// Files in this pod
-    files: Vec<PodFile>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub files: Vec<PodFile>,
     /// Optional files in this pod
-    files_optional: Vec<PodFile>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub files_optional: Vec<PodFile>,
 }
 
 impl PodFileRoot {
@@ -24,16 +26,16 @@ impl PodFileRoot {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, PartialOrd, Eq, Ord)]
+#[derive(Default, Debug, Serialize, Deserialize, PartialEq, PartialOrd, Eq, Ord)]
 pub struct PodFile {
     /// Path of this file, relative to manifest.toml
-    path: String,
+    pub path: String,
     /// Hash of this file
-    hash: String,
+    pub hash: String,
     /// Size of this file in bytes
-    size: usize,
+    pub size: usize,
     /// Last modified time of this file
-    modified: DateTime<Utc>,
+    pub modified: DateTime<Utc>,
 }
 
 #[cfg(test)]
