@@ -125,6 +125,7 @@ pub struct PodManifestMetaPod {
     /// title of pod
     pub title: String,
     /// description of pod
+    #[serde(skip_serializing_if = "String::is_empty")]
     pub description: String,
     /// background color of pod
     #[serde(skip_serializing_if = "String::is_empty")]
