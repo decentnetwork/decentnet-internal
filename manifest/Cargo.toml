@@ -7,6 +7,8 @@ license = "MIT OR Apache-2.0"
 
 [dependencies]
 serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+serde_bytes = { workspace = true }
 toml = { workspace = true }
 chrono = { workspace = true }
 
@@ -18,3 +20,9 @@ bitcoin = { workspace = true, features = ["rand"] }
 rand = { workspace = true }
 frost-secp256k1 = { workspace = true }
 frost-ristretto255 = { workspace = true }
+zeronet_cryptography = { workspace = true }
+zerucontent = { workspace = true }
+
+[features]
+default = ["zeronet"]
+zeronet = []
