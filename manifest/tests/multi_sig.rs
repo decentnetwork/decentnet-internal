@@ -1,4 +1,3 @@
-
 use frost::{
     keys::{
         generate_with_dealer,
@@ -15,35 +14,24 @@ use std::collections::BTreeMap;
 fn gen_keys(
     min_signers: u16,
     max_signers: u16,
+    mut rng: impl rand::RngCore + rand::CryptoRng,
 ) -> (BTreeMap<Identifier, SecretShare>, PublicKeyPackage) {
-    let mut rng = thread_rng();
-
-    frost::keys::generate_with_dealer(
-        max_signers,
-        min_signers,
-        frost::keys::IdentifierList::Default,
-        &mut rng,
-    )
-    .unwrap()
+    generate_with_dealer(max_signers, min_signers, IdentifierList::Default, &mut rng).unwrap()
 }
 
+/// Generates a group signature with 2 signers, 2 of which are required to sign.
+/// The signature is then verified by the group public key.
 #[test]
 fn test_multisig() {
     let mut rng = thread_rng();
     let max_signers = 2;
     let min_signers = 2;
-    let (shares, pubkey_package) = generate_with_dealer(
-        max_signers,
-        min_signers,
-        frost::keys::IdentifierList::Default,
-        &mut rng,
-    )
-    .unwrap();
+    let (shares, pubkey_package) = gen_keys(max_signers, min_signers, &mut rng);
 
     // Verifies the secret shares from the dealer and store them in a HashMap.
     // In practice, the KeyPackages must be sent to its respective participants
     // through a confidential and authenticated channel.
-    let mut key_packages: BTreeMap<_, _> = BTreeMap::new();
+    let mut key_packages = BTreeMap::new();
 
     for (identifier, secret_share) in shares {
         let key_package = frost::keys::KeyPackage::try_from(secret_share).unwrap();
@@ -120,13 +108,15 @@ fn test_multisig() {
     assert!(is_signature_valid);
 }
 
+/// Share recovery test with 3 signers, 2 of which are required to recover the share.
+/// Signer 1 will lose their share.
+/// Signer 2 and 3 will help signer 1 to recover their share.
 #[test]
 fn recover_secret() {
     let rng = thread_rng();
     let max_signers = 3;
     let min_signers = 2;
-    let (shares, _pubkeys): (_, _) =
-        generate_with_dealer(max_signers, min_signers, IdentifierList::Default, rng).unwrap();
+    let (shares, _pubkeys) = gen_keys(min_signers, max_signers, rng);
 
     let participant = &shares[&Identifier::try_from(1).unwrap()];
 
@@ -136,21 +126,13 @@ fn recover_secret() {
     let helpers = [*helper.identifier(), *helper_1.identifier()];
 
     let mut rng = thread_rng();
-    let helper_delta = repair_share_step_1::<Cipher, _>(
-        &helpers,
-        helper,
-        &mut rng,
-        *participant.identifier(),
-    )
-    .unwrap();
+    let helper_delta =
+        repair_share_step_1::<Cipher, _>(&helpers, helper, &mut rng, *participant.identifier())
+            .unwrap();
 
-    let helper_1_delta = repair_share_step_1::<Cipher, _>(
-        &helpers,
-        helper_1,
-        &mut rng,
-        *participant.identifier(),
-    )
-    .unwrap();
+    let helper_1_delta =
+        repair_share_step_1::<Cipher, _>(&helpers, helper_1, &mut rng, *participant.identifier())
+            .unwrap();
     let helper_sigma = repair_share_step_2(&[helper_delta[&helpers[0]]]);
 
     let helper_1_sigma = repair_share_step_2(&[helper_1_delta[&helpers[1]]]);
@@ -164,63 +146,40 @@ fn recover_secret() {
     assert_ne!(secret_share.signing_share(), participant.signing_share());
 }
 
+/// Share recovery test with 2 signers, 2 of which are required to recover the share.
+/// Signer 2 will lose their share.
+/// Signer 1 will help signer 2 to recover their share.
+/// Share recovery should fail because the minimum number of signers required to recover the share is 2.
 #[test]
 fn recover_secret_1() {
     let mut rng = thread_rng();
     let max_signers = 2;
     let min_signers = 2;
-    let (shares, _pubkeys): (_, _) =
-        generate_with_dealer(max_signers, min_signers, IdentifierList::Default, &mut rng).unwrap();
+    let (shares, _pubkeys) = gen_keys(max_signers, min_signers, &mut rng);
 
     let participant = &shares[&Identifier::try_from(1).unwrap()];
 
     let helper = &shares[&Identifier::try_from(1).unwrap()];
-    let helper_1 = &shares[&Identifier::try_from(2).unwrap()];
 
-    let helpers = [*helper.identifier(), *helper_1.identifier()];
+    let helpers = [*helper.identifier()];
 
-    let helper_delta = repair_share_step_1::<Cipher, _>(
-        &helpers,
-        helper,
-        &mut rng,
-        *participant.identifier(),
-    )
-    .unwrap();
+    let helper_delta =
+        repair_share_step_1::<Cipher, _>(&helpers, helper, &mut rng, *participant.identifier());
 
-    let helper_1_delta = repair_share_step_1::<Cipher, _>(
-        &helpers,
-        helper_1,
-        &mut rng,
-        *participant.identifier(),
-    )
-    .unwrap();
-    let helper_sigma =
-        repair_share_step_2(&[helper_delta[&helpers[0]], helper_1_delta[&helpers[0]]]);
-
-    let helper_1_sigma =
-        repair_share_step_2(&[helper_1_delta[&helpers[1]], helper_delta[&helpers[1]]]);
-
-    let secret_share = repair_share_step_3(
-        &[helper_sigma, helper_1_sigma],
-        *participant.identifier(),
-        participant.commitment(),
-    );
-
-    assert_eq!(secret_share.signing_share(), participant.signing_share());
+    assert!(helper_delta.is_err());
+    assert!(helper_delta == Err(Error::InvalidMinSigners))
 }
 
+/// Share recovery test with 3 signers, 2 of which are required to recover the share.
+/// Signer 2 will lose their share.
+/// Signer 1 will help signer 2 to recover their share.
+/// Share recovery should fail because the minimum number of signers required to recover the share is 2.
 #[test]
 fn recover_secret_2() {
     let mut rng = thread_rng();
     let max_signers = 3;
     let min_signers = 2; // This is to make sure this test fails at the right point
-    let (shares, _pubkeys): (BTreeMap<_, _>, _) = frost::keys::generate_with_dealer(
-        max_signers,
-        min_signers,
-        frost::keys::IdentifierList::Default,
-        &mut rng,
-    )
-    .unwrap();
+    let (shares, _pubkeys): (BTreeMap<_, _>, _) = gen_keys(min_signers, max_signers, &mut rng);
 
     let helper = Identifier::try_from(3).unwrap();
 
@@ -235,19 +194,17 @@ fn recover_secret_2() {
     assert!(out == Err(Error::InvalidMinSigners))
 }
 
+/// Share recovery test with 5 signers, 2 of which are required to recover the share.
+/// Signer 2 will lose their share.
+/// Signer 1 and 4 will help signer 2 to recover their share.
+/// Signer 3 and 5 will not participate in the recovery.
 #[test]
 fn recover_secret_3() {
     let mut rng = thread_rng();
 
     let max_signers = 3;
     let min_signers = 2;
-    let (shares, _pubkeys): (_, _) = frost::keys::generate_with_dealer(
-        max_signers,
-        min_signers,
-        frost::keys::IdentifierList::Default,
-        &mut rng,
-    )
-    .unwrap();
+    let (shares, _pubkeys) = gen_keys(min_signers, max_signers, &mut rng);
 
     // Try to recover a share
 
@@ -262,20 +219,12 @@ fn recover_secret_3() {
 
     // Each helper generates random values for each helper
 
-    let helper_1_deltas = repair_share_step_1::<Cipher, _>(
-        &helpers,
-        helper_1,
-        &mut rng,
-        *participant.identifier(),
-    )
-    .unwrap();
-    let helper_4_deltas = repair_share_step_1::<Cipher, _>(
-        &helpers,
-        helper_4,
-        &mut rng,
-        *participant.identifier(),
-    )
-    .unwrap();
+    let helper_1_deltas =
+        repair_share_step_1::<Cipher, _>(&helpers, helper_1, &mut rng, *participant.identifier())
+            .unwrap();
+    let helper_4_deltas =
+        repair_share_step_1::<Cipher, _>(&helpers, helper_4, &mut rng, *participant.identifier())
+            .unwrap();
 
     // Each helper calculates their sigma from the random values received from the other helpers
 
@@ -296,19 +245,16 @@ fn recover_secret_3() {
     assert!(participant.signing_share() == participant_recovered_share.signing_share())
 }
 
+/// Share recovery test with 5 signers, 3 of which are required to recover the share.
+/// Signer 2 will lose their share.
+/// Signer 1, 4 and 5 will help signer 2 to recover their share.
 #[test]
 fn recover_secret_4() {
     let mut rng = thread_rng();
 
     let max_signers = 5;
     let min_signers = 3;
-    let (shares, _pubkeys): (_, _) = frost::keys::generate_with_dealer(
-        max_signers,
-        min_signers,
-        frost::keys::IdentifierList::Default,
-        &mut rng,
-    )
-    .unwrap();
+    let (shares, _pubkeys) = gen_keys(min_signers, max_signers, &mut rng);
 
     // Try to recover a share
 
@@ -328,27 +274,15 @@ fn recover_secret_4() {
 
     // Each helper generates random values for each helper
 
-    let helper_1_deltas = repair_share_step_1::<Cipher, _>(
-        &helpers,
-        helper_1,
-        &mut rng,
-        *participant.identifier(),
-    )
-    .unwrap();
-    let helper_4_deltas = repair_share_step_1::<Cipher, _>(
-        &helpers,
-        helper_4,
-        &mut rng,
-        *participant.identifier(),
-    )
-    .unwrap();
-    let helper_5_deltas = repair_share_step_1::<Cipher, _>(
-        &helpers,
-        helper_5,
-        &mut rng,
-        *participant.identifier(),
-    )
-    .unwrap();
+    let helper_1_deltas =
+        repair_share_step_1::<Cipher, _>(&helpers, helper_1, &mut rng, *participant.identifier())
+            .unwrap();
+    let helper_4_deltas =
+        repair_share_step_1::<Cipher, _>(&helpers, helper_4, &mut rng, *participant.identifier())
+            .unwrap();
+    let helper_5_deltas =
+        repair_share_step_1::<Cipher, _>(&helpers, helper_5, &mut rng, *participant.identifier())
+            .unwrap();
 
     // Each helper calculates their sigma from the random values received from the other helpers
 
@@ -380,13 +314,23 @@ fn recover_secret_4() {
     assert!(participant.signing_share() == participant_recovered_share.signing_share())
 }
 
+/// Initial Min Signers: 3, Max Signers: 5
+/// New     Min Signers: 2, Max Signers: 5
+/// Signers 1, 2, 4 will participate in resharing.
+/// They will reshare the key amongst themselves, plus new signer 5.
+/// Signer 3 will be excluded.
+/// The threshold will be changed from 3 to 2.
+/// Each helper generates their random coefficients and commitments.
+/// All signers should compute the same group pubkeys.
+/// The new pubkey package should be the same group key as the old one,
+/// but with new coefficients and shares.
 #[test]
 fn reshare_verify_key_5() {
     let mut rng = thread_rng();
 
     let max_signers = 5;
     let old_min_signers = 3;
-    let (old_shares, old_pubkeys) = gen_keys(old_min_signers, max_signers);
+    let (old_shares, old_pubkeys) = gen_keys(old_min_signers, max_signers, &mut rng);
 
     // Signer 1, 2, and 4 will participate in resharing.
     let helper_1 = &old_shares[&Identifier::try_from(1).unwrap()];
@@ -397,10 +341,10 @@ fn reshare_verify_key_5() {
     // Signer 3 will be excluded.
     let new_signer_5_ident = Identifier::try_from(5).unwrap();
     let new_signer_idents = [
-        helper_1.identifier().clone(),
-        helper_2.identifier().clone(),
-        helper_4.identifier().clone(),
-        new_signer_5_ident.clone(),
+        *helper_1.identifier(),
+        *helper_2.identifier(),
+        *helper_4.identifier(),
+        new_signer_5_ident,
     ];
 
     // The threshold will be changed from 3 to 2.
@@ -408,7 +352,7 @@ fn reshare_verify_key_5() {
 
     // Each helper generates their random coefficients and commitments.
     let helper_1_subshares = reshare_step_1(
-        &helper_1.signing_share(),
+        helper_1.signing_share(),
         &mut rng,
         new_min_signers,
         &new_signer_idents,
@@ -416,7 +360,7 @@ fn reshare_verify_key_5() {
     .expect("error computing resharing step 1 for helper 1");
 
     let helper_2_subshares = reshare_step_1(
-        &helper_2.signing_share(),
+        helper_2.signing_share(),
         &mut rng,
         new_min_signers,
         &new_signer_idents,
@@ -424,7 +368,7 @@ fn reshare_verify_key_5() {
     .expect("error computing resharing step 1 for helper 2");
 
     let helper_4_subshares = reshare_step_1(
-        &helper_4.signing_share(),
+        helper_4.signing_share(),
         &mut rng,
         new_min_signers,
         &new_signer_idents,
@@ -444,7 +388,7 @@ fn reshare_verify_key_5() {
             let received_subshares = all_subshares
                 .iter()
                 .map(|(&sender_id, sender_shares)| {
-                    (sender_id.clone(), sender_shares[&recipient_id].clone())
+                    (*sender_id, sender_shares[&recipient_id].clone())
                 })
                 .collect::<BTreeMap<_, _>>();
             (recipient_id, received_subshares)
@@ -454,7 +398,7 @@ fn reshare_verify_key_5() {
     // Recipients of the resharing can now validate and compute their new shares.
 
     let (new_seckeys_1, new_pubkeys_1) = reshare_step_2(
-        helper_1.identifier().clone(),
+        *helper_1.identifier(),
         &old_pubkeys,
         new_min_signers,
         new_signer_idents.as_slice(),
@@ -463,7 +407,7 @@ fn reshare_verify_key_5() {
     .expect("error computing reshared share for signer 1");
 
     let (new_seckeys_2, new_pubkeys_2) = reshare_step_2(
-        helper_2.identifier().clone(),
+        *helper_2.identifier(),
         &old_pubkeys,
         new_min_signers,
         &new_signer_idents,
@@ -472,7 +416,7 @@ fn reshare_verify_key_5() {
     .expect("error computing reshared share for signer 2");
 
     let (new_seckeys_4, new_pubkeys_4) = reshare_step_2(
-        helper_4.identifier().clone(),
+        *helper_4.identifier(),
         &old_pubkeys,
         new_min_signers,
         &new_signer_idents,
@@ -508,51 +452,58 @@ fn reshare_verify_key_5() {
     assert_eq!(new_seckeys_1.min_signers(), &new_min_signers);
 }
 
+/// Initial Min Signers: 3, Max Signers: 5
+/// New     Min Signers: 3, Max Signers: 5
+/// Signers 1, 2, 4 will participate in resharing.
+/// They will reshare the key amongst themselves.
+/// Signer 3 will be excluded.
+/// The min signers threshold won't be changed.
+/// Each helper generates their random coefficients and commitments.
+/// All signers should compute the same group pubkeys.
+/// The new pubkey package should be the same group key as the old one,
+/// but with new coefficients and shares.
 #[test]
 fn reshare_verify_key_6() {
     let mut rng = thread_rng();
 
     let max_signers = 5;
-    let old_min_signers = 3;
-    let (old_shares, old_pubkeys) = gen_keys(old_min_signers, max_signers);
+    let min_signers = 3;
+    let (old_shares, old_pubkeys) = gen_keys(min_signers, max_signers, &mut rng);
 
     // Signer 1, 2, and 4 will participate in resharing.
     let helper_1 = &old_shares[&Identifier::try_from(1).unwrap()];
     let helper_2 = &old_shares[&Identifier::try_from(2).unwrap()];
     let helper_4 = &old_shares[&Identifier::try_from(4).unwrap()];
 
-    // They will reshare the key amongst themselves, plus new signer 5.
+    // They will reshare the key amongst themselves.
     // Signer 3 will be excluded.
     let new_signer_idents = [
-        helper_1.identifier().clone(),
-        helper_2.identifier().clone(),
-        helper_4.identifier().clone(),
+        *helper_1.identifier(),
+        *helper_2.identifier(),
+        *helper_4.identifier(),
     ];
-
-    // The threshold will be changed from 3 to 2.
-    let new_min_signers = 3;
 
     // Each helper generates their random coefficients and commitments.
     let helper_1_subshares = reshare_step_1(
-        &helper_1.signing_share(),
+        helper_1.signing_share(),
         &mut rng,
-        new_min_signers,
+        min_signers,
         &new_signer_idents,
     )
     .expect("error computing resharing step 1 for helper 1");
 
     let helper_2_subshares = reshare_step_1(
-        &helper_2.signing_share(),
+        helper_2.signing_share(),
         &mut rng,
-        new_min_signers,
+        min_signers,
         &new_signer_idents,
     )
     .expect("error computing resharing step 1 for helper 2");
 
     let helper_4_subshares = reshare_step_1(
-        &helper_4.signing_share(),
+        helper_4.signing_share(),
         &mut rng,
-        new_min_signers,
+        min_signers,
         &new_signer_idents,
     )
     .expect("error computing resharing step 1 for helper 4");
@@ -570,7 +521,7 @@ fn reshare_verify_key_6() {
             let received_subshares = all_subshares
                 .iter()
                 .map(|(&sender_id, sender_shares)| {
-                    (sender_id.clone(), sender_shares[&recipient_id].clone())
+                    (*sender_id, sender_shares[&recipient_id].clone())
                 })
                 .collect::<BTreeMap<_, _>>();
             (recipient_id, received_subshares)
@@ -580,27 +531,27 @@ fn reshare_verify_key_6() {
     // Recipients of the resharing can now validate and compute their new shares.
 
     let (new_seckeys_1, new_pubkeys_1) = reshare_step_2(
-        helper_1.identifier().clone(),
+        *helper_1.identifier(),
         &old_pubkeys,
-        new_min_signers,
+        min_signers,
         new_signer_idents.as_slice(),
         &received_subshares[&helper_1.identifier()],
     )
     .expect("error computing reshared share for signer 1");
 
     let (new_seckeys_2, new_pubkeys_2) = reshare_step_2(
-        helper_2.identifier().clone(),
+        *helper_2.identifier(),
         &old_pubkeys,
-        new_min_signers,
+        min_signers,
         &new_signer_idents,
         &received_subshares[&helper_2.identifier()],
     )
     .expect("error computing reshared share for signer 2");
 
     let (new_seckeys_4, new_pubkeys_4) = reshare_step_2(
-        helper_4.identifier().clone(),
+        *helper_4.identifier(),
         &old_pubkeys,
-        new_min_signers,
+        min_signers,
         &new_signer_idents,
         &received_subshares[&helper_4.identifier()],
     )
@@ -620,16 +571,26 @@ fn reshare_verify_key_6() {
         old_pubkeys.verifying_shares()
     );
 
-    assert_eq!(new_seckeys_1.min_signers(), &new_min_signers);
+    assert_eq!(new_seckeys_1.min_signers(), &min_signers);
 }
 
+/// Initial Min Signers: 3, Max Signers: 5
+/// New     Min Signers: 3, Max Signers: 5
+/// Signers 1, 2, 4 will participate in resharing.
+/// They will reshare the key amongst themselves, plus new signer 5.
+/// Signer 3 will be excluded.
+/// The min signers threshold won't be changed.
+/// Each helper generates their random coefficients and commitments.
+/// All signers should compute the same group pubkeys.
+/// The new pubkey package should be the same group key as the old one,
+/// but with new coefficients and shares.
 #[test]
 fn reshare_verify_key_7() {
     let mut rng = thread_rng();
 
     let max_signers = 5;
-    let old_min_signers = 3;
-    let (old_shares, old_pubkeys) = gen_keys(old_min_signers, max_signers);
+    let min_signers = 3;
+    let (old_shares, old_pubkeys) = gen_keys(min_signers, max_signers, &mut rng);
 
     // Signer 1, 2, and 4 will participate in resharing.
     let helper_1 = &old_shares[&Identifier::try_from(1).unwrap()];
@@ -640,36 +601,36 @@ fn reshare_verify_key_7() {
     // Signer 3 will be excluded.
     let new_signer_5_ident = Identifier::try_from(5).unwrap();
     let new_signer_idents = [
-        helper_1.identifier().clone(),
-        helper_2.identifier().clone(),
-        helper_4.identifier().clone(),
-        new_signer_5_ident.clone(),
+        *helper_1.identifier(),
+        *helper_2.identifier(),
+        *helper_4.identifier(),
+        new_signer_5_ident,
     ];
 
-    // The threshold will be changed from 3 to 2.
-    let new_min_signers = 3;
+    // The threshold will be changed from 3 to 3.
+    let min_signers = 3;
 
     // Each helper generates their random coefficients and commitments.
     let helper_1_subshares = reshare_step_1(
-        &helper_1.signing_share(),
+        helper_1.signing_share(),
         &mut rng,
-        new_min_signers,
+        min_signers,
         &new_signer_idents,
     )
     .expect("error computing resharing step 1 for helper 1");
 
     let helper_2_subshares = reshare_step_1(
-        &helper_2.signing_share(),
+        helper_2.signing_share(),
         &mut rng,
-        new_min_signers,
+        min_signers,
         &new_signer_idents,
     )
     .expect("error computing resharing step 1 for helper 2");
 
     let helper_4_subshares = reshare_step_1(
-        &helper_4.signing_share(),
+        helper_4.signing_share(),
         &mut rng,
-        new_min_signers,
+        min_signers,
         &new_signer_idents,
     )
     .expect("error computing resharing step 1 for helper 4");
@@ -687,7 +648,7 @@ fn reshare_verify_key_7() {
             let received_subshares = all_subshares
                 .iter()
                 .map(|(&sender_id, sender_shares)| {
-                    (sender_id.clone(), sender_shares[&recipient_id].clone())
+                    (*sender_id, sender_shares[&recipient_id].clone())
                 })
                 .collect::<BTreeMap<_, _>>();
             (recipient_id, received_subshares)
@@ -697,27 +658,27 @@ fn reshare_verify_key_7() {
     // Recipients of the resharing can now validate and compute their new shares.
 
     let (new_seckeys_1, new_pubkeys_1) = reshare_step_2(
-        helper_1.identifier().clone(),
+        *helper_1.identifier(),
         &old_pubkeys,
-        new_min_signers,
+        min_signers,
         new_signer_idents.as_slice(),
         &received_subshares[&helper_1.identifier()],
     )
     .expect("error computing reshared share for signer 1");
 
     let (new_seckeys_2, new_pubkeys_2) = reshare_step_2(
-        helper_2.identifier().clone(),
+        *helper_2.identifier(),
         &old_pubkeys,
-        new_min_signers,
+        min_signers,
         &new_signer_idents,
         &received_subshares[&helper_2.identifier()],
     )
     .expect("error computing reshared share for signer 2");
 
     let (new_seckeys_4, new_pubkeys_4) = reshare_step_2(
-        helper_4.identifier().clone(),
+        *helper_4.identifier(),
         &old_pubkeys,
-        new_min_signers,
+        min_signers,
         &new_signer_idents,
         &received_subshares[&helper_4.identifier()],
     )
@@ -726,7 +687,7 @@ fn reshare_verify_key_7() {
     let (new_seckeys_5, new_pubkeys_5) = reshare_step_2(
         new_signer_5_ident,
         &old_pubkeys,
-        new_min_signers,
+        min_signers,
         &new_signer_idents,
         &received_subshares[&new_signer_5_ident],
     )
@@ -748,40 +709,50 @@ fn reshare_verify_key_7() {
         old_pubkeys.verifying_shares()
     );
 
-    assert_eq!(new_seckeys_1.min_signers(), &new_min_signers);
+    assert_eq!(new_seckeys_1.min_signers(), &min_signers);
 }
 
+/// Initial Min Signers: 3, Max Signers: 5
+/// New     Min Signers: 4, Max Signers: 5
+/// Signers 1, 2, 4 will participate in resharing.
+/// They will reshare the key amongst themselves, plus new signers 5 and 6.
+/// Signer 3 will be excluded.
+/// The threshold will be changed from 3 to 4.
+/// Each helper generates their random coefficients and commitments.
+/// All signers should compute the same group pubkeys.
+/// The new pubkey package should be the same group key as the old one,
+/// but with new coefficients and shares.
 #[test]
 fn reshare_verify_key_8() {
     let mut rng = thread_rng();
 
     let max_signers = 5;
     let old_min_signers = 3;
-    let (old_shares, old_pubkeys) = gen_keys(old_min_signers, max_signers);
+    let (old_shares, old_pubkeys) = gen_keys(old_min_signers, max_signers, &mut rng);
 
     // Signer 1, 2, and 4 will participate in resharing.
     let helper_1 = &old_shares[&Identifier::try_from(1).unwrap()];
     let helper_2 = &old_shares[&Identifier::try_from(2).unwrap()];
     let helper_4 = &old_shares[&Identifier::try_from(4).unwrap()];
 
-    // They will reshare the key amongst themselves, plus new signer 5.
+    // They will reshare the key amongst themselves, plus new signers 5 and 6.
     // Signer 3 will be excluded.
     let new_signer_5_ident = Identifier::try_from(5).unwrap();
     let new_signer_6_ident = Identifier::try_from(6).unwrap();
     let new_signer_idents = [
-        helper_1.identifier().clone(),
-        helper_2.identifier().clone(),
-        helper_4.identifier().clone(),
-        new_signer_5_ident.clone(),
-        new_signer_6_ident.clone(),
+        *helper_1.identifier(),
+        *helper_2.identifier(),
+        *helper_4.identifier(),
+        new_signer_5_ident,
+        new_signer_6_ident,
     ];
 
-    // The threshold will be changed from 3 to 2.
+    // The threshold will be changed from 3 to 4.
     let new_min_signers = 4;
 
     // Each helper generates their random coefficients and commitments.
     let helper_1_subshares = reshare_step_1(
-        &helper_1.signing_share(),
+        helper_1.signing_share(),
         &mut rng,
         new_min_signers,
         &new_signer_idents,
@@ -789,7 +760,7 @@ fn reshare_verify_key_8() {
     .expect("error computing resharing step 1 for helper 1");
 
     let helper_2_subshares = reshare_step_1(
-        &helper_2.signing_share(),
+        helper_2.signing_share(),
         &mut rng,
         new_min_signers,
         &new_signer_idents,
@@ -797,7 +768,7 @@ fn reshare_verify_key_8() {
     .expect("error computing resharing step 1 for helper 2");
 
     let helper_4_subshares = reshare_step_1(
-        &helper_4.signing_share(),
+        helper_4.signing_share(),
         &mut rng,
         new_min_signers,
         &new_signer_idents,
@@ -817,7 +788,7 @@ fn reshare_verify_key_8() {
             let received_subshares = all_subshares
                 .iter()
                 .map(|(&sender_id, sender_shares)| {
-                    (sender_id.clone(), sender_shares[&recipient_id].clone())
+                    (*sender_id, sender_shares[&recipient_id].clone())
                 })
                 .collect::<BTreeMap<_, _>>();
             (recipient_id, received_subshares)
@@ -827,7 +798,7 @@ fn reshare_verify_key_8() {
     // Recipients of the resharing can now validate and compute their new shares.
 
     let (new_seckeys_1, new_pubkeys_1) = reshare_step_2(
-        helper_1.identifier().clone(),
+        *helper_1.identifier(),
         &old_pubkeys,
         new_min_signers,
         new_signer_idents.as_slice(),
@@ -836,7 +807,7 @@ fn reshare_verify_key_8() {
     .expect("error computing reshared share for signer 1");
 
     let (new_seckeys_2, new_pubkeys_2) = reshare_step_2(
-        helper_2.identifier().clone(),
+        *helper_2.identifier(),
         &old_pubkeys,
         new_min_signers,
         &new_signer_idents,
@@ -845,7 +816,7 @@ fn reshare_verify_key_8() {
     .expect("error computing reshared share for signer 2");
 
     let (new_seckeys_4, new_pubkeys_4) = reshare_step_2(
-        helper_4.identifier().clone(),
+        *helper_4.identifier(),
         &old_pubkeys,
         new_min_signers,
         &new_signer_idents,

@@ -22,4 +22,4 @@ cid = "0.10.1"
 bitcoin = { version = "0.31.0" }
 rand = "0.8.5"
 frost-secp256k1 = "0.7.0"
-frost-ristretto255 = { git = "https://github.com/ZcashFoundation/frost.git", rev = "621f79e59e42e255c34a90daffe9968b55f7c151"}
+frost-ristretto255 = { git = "https://github.com/ZcashFoundation/frost.git", rev = "621f79e59e42e255c34a90daffe9968b55f7c151" }
