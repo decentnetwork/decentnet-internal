@@ -1,14 +1,31 @@
+
 use frost::{
     keys::{
         generate_with_dealer,
         repairable::{repair_share_step_1, repair_share_step_2, repair_share_step_3},
-        IdentifierList,
+        resharing::{reshare_step_1, reshare_step_2, SecretSubshare},
+        IdentifierList, PublicKeyPackage, SecretShare,
     },
-    Error, Identifier, Secp256K1Sha256,
+    Error, Identifier, Ristretto255Sha512 as Cipher,
 };
-use frost_secp256k1 as frost;
+use frost_ristretto255 as frost;
 use rand::thread_rng;
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
+
+fn gen_keys(
+    min_signers: u16,
+    max_signers: u16,
+) -> (BTreeMap<Identifier, SecretShare>, PublicKeyPackage) {
+    let mut rng = thread_rng();
+
+    frost::keys::generate_with_dealer(
+        max_signers,
+        min_signers,
+        frost::keys::IdentifierList::Default,
+        &mut rng,
+    )
+    .unwrap()
+}
 
 #[test]
 fn test_multisig() {
@@ -26,14 +43,14 @@ fn test_multisig() {
     // Verifies the secret shares from the dealer and store them in a HashMap.
     // In practice, the KeyPackages must be sent to its respective participants
     // through a confidential and authenticated channel.
-    let mut key_packages: HashMap<_, _> = HashMap::new();
+    let mut key_packages: BTreeMap<_, _> = BTreeMap::new();
 
     for (identifier, secret_share) in shares {
         let key_package = frost::keys::KeyPackage::try_from(secret_share).unwrap();
         key_packages.insert(identifier, key_package);
     }
 
-    let mut nonces_map = HashMap::new();
+    let mut nonces_map = BTreeMap::new();
     let mut commitments_map = BTreeMap::new();
 
     ////////////////////////////////////////////////////////////////////////////
@@ -47,7 +64,7 @@ fn test_multisig() {
         // Generate one (1) nonce and one SigningCommitments instance for each
         // participant, up to _threshold_.
         let (nonces, commitments) = frost::round1::commit(
-            key_packages[&participant_identifier].secret_share(),
+            key_packages[&participant_identifier].signing_share(),
             &mut rng,
         );
         // In practice, the nonces must be kept by the participant to use in the
@@ -61,7 +78,7 @@ fn test_multisig() {
     // This is what the signature aggregator / coordinator needs to do:
     // - decide what message to sign
     // - take one (unused) commitment per signing participant
-    let mut signature_shares = HashMap::new();
+    let mut signature_shares = BTreeMap::new();
     let message = "message to sign".as_bytes();
     let signing_package = frost::SigningPackage::new(commitments_map, message);
 
@@ -97,7 +114,7 @@ fn test_multisig() {
     // Check that the threshold signature can be verified by the group public
     // key (the verification key).
     let is_signature_valid = pubkey_package
-        .group_public()
+        .verifying_key()
         .verify(message, &group_signature)
         .is_ok();
     assert!(is_signature_valid);
@@ -119,7 +136,7 @@ fn recover_secret() {
     let helpers = [*helper.identifier(), *helper_1.identifier()];
 
     let mut rng = thread_rng();
-    let helper_delta = repair_share_step_1::<Secp256K1Sha256, _>(
+    let helper_delta = repair_share_step_1::<Cipher, _>(
         &helpers,
         helper,
         &mut rng,
@@ -127,7 +144,7 @@ fn recover_secret() {
     )
     .unwrap();
 
-    let helper_1_delta = repair_share_step_1::<Secp256K1Sha256, _>(
+    let helper_1_delta = repair_share_step_1::<Cipher, _>(
         &helpers,
         helper_1,
         &mut rng,
@@ -144,7 +161,7 @@ fn recover_secret() {
         participant.commitment(),
     );
 
-    assert_ne!(secret_share.secret(), participant.secret());
+    assert_ne!(secret_share.signing_share(), participant.signing_share());
 }
 
 #[test]
@@ -162,7 +179,7 @@ fn recover_secret_1() {
 
     let helpers = [*helper.identifier(), *helper_1.identifier()];
 
-    let helper_delta = repair_share_step_1::<Secp256K1Sha256, _>(
+    let helper_delta = repair_share_step_1::<Cipher, _>(
         &helpers,
         helper,
         &mut rng,
@@ -170,7 +187,7 @@ fn recover_secret_1() {
     )
     .unwrap();
 
-    let helper_1_delta = repair_share_step_1::<Secp256K1Sha256, _>(
+    let helper_1_delta = repair_share_step_1::<Cipher, _>(
         &helpers,
         helper_1,
         &mut rng,
@@ -189,7 +206,7 @@ fn recover_secret_1() {
         participant.commitment(),
     );
 
-    assert_eq!(secret_share.secret(), participant.secret());
+    assert_eq!(secret_share.signing_share(), participant.signing_share());
 }
 
 #[test]
@@ -197,7 +214,7 @@ fn recover_secret_2() {
     let mut rng = thread_rng();
     let max_signers = 3;
     let min_signers = 2; // This is to make sure this test fails at the right point
-    let (shares, _pubkeys): (HashMap<_, _>, _) = frost::keys::generate_with_dealer(
+    let (shares, _pubkeys): (BTreeMap<_, _>, _) = frost::keys::generate_with_dealer(
         max_signers,
         min_signers,
         frost::keys::IdentifierList::Default,
@@ -207,7 +224,7 @@ fn recover_secret_2() {
 
     let helper = Identifier::try_from(3).unwrap();
 
-    let out = repair_share_step_1::<Secp256K1Sha256, _>(
+    let out = repair_share_step_1::<Cipher, _>(
         &[helper],
         &shares[&helper],
         &mut rng,
@@ -245,14 +262,14 @@ fn recover_secret_3() {
 
     // Each helper generates random values for each helper
 
-    let helper_1_deltas = repair_share_step_1::<Secp256K1Sha256, _>(
+    let helper_1_deltas = repair_share_step_1::<Cipher, _>(
         &helpers,
         helper_1,
         &mut rng,
         *participant.identifier(),
     )
     .unwrap();
-    let helper_4_deltas = repair_share_step_1::<Secp256K1Sha256, _>(
+    let helper_4_deltas = repair_share_step_1::<Cipher, _>(
         &helpers,
         helper_4,
         &mut rng,
@@ -276,7 +293,7 @@ fn recover_secret_3() {
     );
 
     // TODO: assert on commitment equality as well once updates have been made to VerifiableSecretSharingCommitment
-    assert!(participant.secret() == participant_recovered_share.secret())
+    assert!(participant.signing_share() == participant_recovered_share.signing_share())
 }
 
 #[test]
@@ -311,21 +328,21 @@ fn recover_secret_4() {
 
     // Each helper generates random values for each helper
 
-    let helper_1_deltas = repair_share_step_1::<Secp256K1Sha256, _>(
+    let helper_1_deltas = repair_share_step_1::<Cipher, _>(
         &helpers,
         helper_1,
         &mut rng,
         *participant.identifier(),
     )
     .unwrap();
-    let helper_4_deltas = repair_share_step_1::<Secp256K1Sha256, _>(
+    let helper_4_deltas = repair_share_step_1::<Cipher, _>(
         &helpers,
         helper_4,
         &mut rng,
         *participant.identifier(),
     )
     .unwrap();
-    let helper_5_deltas = repair_share_step_1::<Secp256K1Sha256, _>(
+    let helper_5_deltas = repair_share_step_1::<Cipher, _>(
         &helpers,
         helper_5,
         &mut rng,
@@ -360,5 +377,517 @@ fn recover_secret_4() {
     );
 
     // TODO: assert on commitment equality as well once updates have been made to VerifiableSecretSharingCommitment
-    assert!(participant.secret() == participant_recovered_share.secret())
+    assert!(participant.signing_share() == participant_recovered_share.signing_share())
+}
+
+#[test]
+fn reshare_verify_key_5() {
+    let mut rng = thread_rng();
+
+    let max_signers = 5;
+    let old_min_signers = 3;
+    let (old_shares, old_pubkeys) = gen_keys(old_min_signers, max_signers);
+
+    // Signer 1, 2, and 4 will participate in resharing.
+    let helper_1 = &old_shares[&Identifier::try_from(1).unwrap()];
+    let helper_2 = &old_shares[&Identifier::try_from(2).unwrap()];
+    let helper_4 = &old_shares[&Identifier::try_from(4).unwrap()];
+
+    // They will reshare the key amongst themselves, plus new signer 5.
+    // Signer 3 will be excluded.
+    let new_signer_5_ident = Identifier::try_from(5).unwrap();
+    let new_signer_idents = [
+        helper_1.identifier().clone(),
+        helper_2.identifier().clone(),
+        helper_4.identifier().clone(),
+        new_signer_5_ident.clone(),
+    ];
+
+    // The threshold will be changed from 3 to 2.
+    let new_min_signers = 2;
+
+    // Each helper generates their random coefficients and commitments.
+    let helper_1_subshares = reshare_step_1(
+        &helper_1.signing_share(),
+        &mut rng,
+        new_min_signers,
+        &new_signer_idents,
+    )
+    .expect("error computing resharing step 1 for helper 1");
+
+    let helper_2_subshares = reshare_step_1(
+        &helper_2.signing_share(),
+        &mut rng,
+        new_min_signers,
+        &new_signer_idents,
+    )
+    .expect("error computing resharing step 1 for helper 2");
+
+    let helper_4_subshares = reshare_step_1(
+        &helper_4.signing_share(),
+        &mut rng,
+        new_min_signers,
+        &new_signer_idents,
+    )
+    .expect("error computing resharing step 1 for helper 4");
+
+    let all_subshares = BTreeMap::from([
+        (helper_1.identifier(), helper_1_subshares),
+        (helper_2.identifier(), helper_2_subshares),
+        (helper_4.identifier(), helper_4_subshares),
+    ]);
+
+    // Sort the subshares into a map of `recipient => sender => subshare`.
+    let received_subshares = new_signer_idents
+        .into_iter()
+        .map(|recipient_id| {
+            let received_subshares = all_subshares
+                .iter()
+                .map(|(&sender_id, sender_shares)| {
+                    (sender_id.clone(), sender_shares[&recipient_id].clone())
+                })
+                .collect::<BTreeMap<_, _>>();
+            (recipient_id, received_subshares)
+        })
+        .collect::<BTreeMap<_, BTreeMap<_, SecretSubshare>>>();
+
+    // Recipients of the resharing can now validate and compute their new shares.
+
+    let (new_seckeys_1, new_pubkeys_1) = reshare_step_2(
+        helper_1.identifier().clone(),
+        &old_pubkeys,
+        new_min_signers,
+        new_signer_idents.as_slice(),
+        &received_subshares[&helper_1.identifier()],
+    )
+    .expect("error computing reshared share for signer 1");
+
+    let (new_seckeys_2, new_pubkeys_2) = reshare_step_2(
+        helper_2.identifier().clone(),
+        &old_pubkeys,
+        new_min_signers,
+        &new_signer_idents,
+        &received_subshares[&helper_2.identifier()],
+    )
+    .expect("error computing reshared share for signer 2");
+
+    let (new_seckeys_4, new_pubkeys_4) = reshare_step_2(
+        helper_4.identifier().clone(),
+        &old_pubkeys,
+        new_min_signers,
+        &new_signer_idents,
+        &received_subshares[&helper_4.identifier()],
+    )
+    .expect("error computing reshared share for signer 4");
+
+    let (new_seckeys_5, new_pubkeys_5) = reshare_step_2(
+        new_signer_5_ident,
+        &old_pubkeys,
+        new_min_signers,
+        &new_signer_idents,
+        &received_subshares[&new_signer_5_ident],
+    )
+    .expect("error computing reshared share for signer 5");
+
+    // all signers should compute the same group pubkeys.
+    assert_eq!(new_pubkeys_1, new_pubkeys_2);
+    assert_eq!(new_pubkeys_1, new_pubkeys_4);
+    assert_eq!(new_pubkeys_1, new_pubkeys_5);
+    assert_eq!(new_seckeys_1.verifying_key(), new_seckeys_2.verifying_key());
+    assert_eq!(new_seckeys_1.verifying_key(), new_seckeys_4.verifying_key());
+    assert_eq!(new_seckeys_1.verifying_key(), new_seckeys_5.verifying_key());
+
+    // The new pubkey package should be the same group key as the old one,
+    // but with new coefficients and shares.
+    assert_eq!(new_pubkeys_1.verifying_key(), old_pubkeys.verifying_key());
+    assert_ne!(
+        new_pubkeys_1.verifying_shares(),
+        old_pubkeys.verifying_shares()
+    );
+
+    assert_eq!(new_seckeys_1.min_signers(), &new_min_signers);
+}
+
+#[test]
+fn reshare_verify_key_6() {
+    let mut rng = thread_rng();
+
+    let max_signers = 5;
+    let old_min_signers = 3;
+    let (old_shares, old_pubkeys) = gen_keys(old_min_signers, max_signers);
+
+    // Signer 1, 2, and 4 will participate in resharing.
+    let helper_1 = &old_shares[&Identifier::try_from(1).unwrap()];
+    let helper_2 = &old_shares[&Identifier::try_from(2).unwrap()];
+    let helper_4 = &old_shares[&Identifier::try_from(4).unwrap()];
+
+    // They will reshare the key amongst themselves, plus new signer 5.
+    // Signer 3 will be excluded.
+    let new_signer_idents = [
+        helper_1.identifier().clone(),
+        helper_2.identifier().clone(),
+        helper_4.identifier().clone(),
+    ];
+
+    // The threshold will be changed from 3 to 2.
+    let new_min_signers = 3;
+
+    // Each helper generates their random coefficients and commitments.
+    let helper_1_subshares = reshare_step_1(
+        &helper_1.signing_share(),
+        &mut rng,
+        new_min_signers,
+        &new_signer_idents,
+    )
+    .expect("error computing resharing step 1 for helper 1");
+
+    let helper_2_subshares = reshare_step_1(
+        &helper_2.signing_share(),
+        &mut rng,
+        new_min_signers,
+        &new_signer_idents,
+    )
+    .expect("error computing resharing step 1 for helper 2");
+
+    let helper_4_subshares = reshare_step_1(
+        &helper_4.signing_share(),
+        &mut rng,
+        new_min_signers,
+        &new_signer_idents,
+    )
+    .expect("error computing resharing step 1 for helper 4");
+
+    let all_subshares = BTreeMap::from([
+        (helper_1.identifier(), helper_1_subshares),
+        (helper_2.identifier(), helper_2_subshares),
+        (helper_4.identifier(), helper_4_subshares),
+    ]);
+
+    // Sort the subshares into a map of `recipient => sender => subshare`.
+    let received_subshares = new_signer_idents
+        .into_iter()
+        .map(|recipient_id| {
+            let received_subshares = all_subshares
+                .iter()
+                .map(|(&sender_id, sender_shares)| {
+                    (sender_id.clone(), sender_shares[&recipient_id].clone())
+                })
+                .collect::<BTreeMap<_, _>>();
+            (recipient_id, received_subshares)
+        })
+        .collect::<BTreeMap<_, BTreeMap<_, SecretSubshare>>>();
+
+    // Recipients of the resharing can now validate and compute their new shares.
+
+    let (new_seckeys_1, new_pubkeys_1) = reshare_step_2(
+        helper_1.identifier().clone(),
+        &old_pubkeys,
+        new_min_signers,
+        new_signer_idents.as_slice(),
+        &received_subshares[&helper_1.identifier()],
+    )
+    .expect("error computing reshared share for signer 1");
+
+    let (new_seckeys_2, new_pubkeys_2) = reshare_step_2(
+        helper_2.identifier().clone(),
+        &old_pubkeys,
+        new_min_signers,
+        &new_signer_idents,
+        &received_subshares[&helper_2.identifier()],
+    )
+    .expect("error computing reshared share for signer 2");
+
+    let (new_seckeys_4, new_pubkeys_4) = reshare_step_2(
+        helper_4.identifier().clone(),
+        &old_pubkeys,
+        new_min_signers,
+        &new_signer_idents,
+        &received_subshares[&helper_4.identifier()],
+    )
+    .expect("error computing reshared share for signer 4");
+
+    // all signers should compute the same group pubkeys.
+    assert_eq!(new_pubkeys_1, new_pubkeys_2);
+    assert_eq!(new_pubkeys_1, new_pubkeys_4);
+    assert_eq!(new_seckeys_1.verifying_key(), new_seckeys_2.verifying_key());
+    assert_eq!(new_seckeys_1.verifying_key(), new_seckeys_4.verifying_key());
+
+    // The new pubkey package should be the same group key as the old one,
+    // but with new coefficients and shares.
+    assert_eq!(new_pubkeys_1.verifying_key(), old_pubkeys.verifying_key());
+    assert_ne!(
+        new_pubkeys_1.verifying_shares(),
+        old_pubkeys.verifying_shares()
+    );
+
+    assert_eq!(new_seckeys_1.min_signers(), &new_min_signers);
+}
+
+#[test]
+fn reshare_verify_key_7() {
+    let mut rng = thread_rng();
+
+    let max_signers = 5;
+    let old_min_signers = 3;
+    let (old_shares, old_pubkeys) = gen_keys(old_min_signers, max_signers);
+
+    // Signer 1, 2, and 4 will participate in resharing.
+    let helper_1 = &old_shares[&Identifier::try_from(1).unwrap()];
+    let helper_2 = &old_shares[&Identifier::try_from(2).unwrap()];
+    let helper_4 = &old_shares[&Identifier::try_from(4).unwrap()];
+
+    // They will reshare the key amongst themselves, plus new signer 5.
+    // Signer 3 will be excluded.
+    let new_signer_5_ident = Identifier::try_from(5).unwrap();
+    let new_signer_idents = [
+        helper_1.identifier().clone(),
+        helper_2.identifier().clone(),
+        helper_4.identifier().clone(),
+        new_signer_5_ident.clone(),
+    ];
+
+    // The threshold will be changed from 3 to 2.
+    let new_min_signers = 3;
+
+    // Each helper generates their random coefficients and commitments.
+    let helper_1_subshares = reshare_step_1(
+        &helper_1.signing_share(),
+        &mut rng,
+        new_min_signers,
+        &new_signer_idents,
+    )
+    .expect("error computing resharing step 1 for helper 1");
+
+    let helper_2_subshares = reshare_step_1(
+        &helper_2.signing_share(),
+        &mut rng,
+        new_min_signers,
+        &new_signer_idents,
+    )
+    .expect("error computing resharing step 1 for helper 2");
+
+    let helper_4_subshares = reshare_step_1(
+        &helper_4.signing_share(),
+        &mut rng,
+        new_min_signers,
+        &new_signer_idents,
+    )
+    .expect("error computing resharing step 1 for helper 4");
+
+    let all_subshares = BTreeMap::from([
+        (helper_1.identifier(), helper_1_subshares),
+        (helper_2.identifier(), helper_2_subshares),
+        (helper_4.identifier(), helper_4_subshares),
+    ]);
+
+    // Sort the subshares into a map of `recipient => sender => subshare`.
+    let received_subshares = new_signer_idents
+        .into_iter()
+        .map(|recipient_id| {
+            let received_subshares = all_subshares
+                .iter()
+                .map(|(&sender_id, sender_shares)| {
+                    (sender_id.clone(), sender_shares[&recipient_id].clone())
+                })
+                .collect::<BTreeMap<_, _>>();
+            (recipient_id, received_subshares)
+        })
+        .collect::<BTreeMap<_, BTreeMap<_, SecretSubshare>>>();
+
+    // Recipients of the resharing can now validate and compute their new shares.
+
+    let (new_seckeys_1, new_pubkeys_1) = reshare_step_2(
+        helper_1.identifier().clone(),
+        &old_pubkeys,
+        new_min_signers,
+        new_signer_idents.as_slice(),
+        &received_subshares[&helper_1.identifier()],
+    )
+    .expect("error computing reshared share for signer 1");
+
+    let (new_seckeys_2, new_pubkeys_2) = reshare_step_2(
+        helper_2.identifier().clone(),
+        &old_pubkeys,
+        new_min_signers,
+        &new_signer_idents,
+        &received_subshares[&helper_2.identifier()],
+    )
+    .expect("error computing reshared share for signer 2");
+
+    let (new_seckeys_4, new_pubkeys_4) = reshare_step_2(
+        helper_4.identifier().clone(),
+        &old_pubkeys,
+        new_min_signers,
+        &new_signer_idents,
+        &received_subshares[&helper_4.identifier()],
+    )
+    .expect("error computing reshared share for signer 4");
+
+    let (new_seckeys_5, new_pubkeys_5) = reshare_step_2(
+        new_signer_5_ident,
+        &old_pubkeys,
+        new_min_signers,
+        &new_signer_idents,
+        &received_subshares[&new_signer_5_ident],
+    )
+    .expect("error computing reshared share for signer 5");
+
+    // all signers should compute the same group pubkeys.
+    assert_eq!(new_pubkeys_1, new_pubkeys_2);
+    assert_eq!(new_pubkeys_1, new_pubkeys_4);
+    assert_eq!(new_pubkeys_1, new_pubkeys_5);
+    assert_eq!(new_seckeys_1.verifying_key(), new_seckeys_2.verifying_key());
+    assert_eq!(new_seckeys_1.verifying_key(), new_seckeys_4.verifying_key());
+    assert_eq!(new_seckeys_1.verifying_key(), new_seckeys_5.verifying_key());
+
+    // The new pubkey package should be the same group key as the old one,
+    // but with new coefficients and shares.
+    assert_eq!(new_pubkeys_1.verifying_key(), old_pubkeys.verifying_key());
+    assert_ne!(
+        new_pubkeys_1.verifying_shares(),
+        old_pubkeys.verifying_shares()
+    );
+
+    assert_eq!(new_seckeys_1.min_signers(), &new_min_signers);
+}
+
+#[test]
+fn reshare_verify_key_8() {
+    let mut rng = thread_rng();
+
+    let max_signers = 5;
+    let old_min_signers = 3;
+    let (old_shares, old_pubkeys) = gen_keys(old_min_signers, max_signers);
+
+    // Signer 1, 2, and 4 will participate in resharing.
+    let helper_1 = &old_shares[&Identifier::try_from(1).unwrap()];
+    let helper_2 = &old_shares[&Identifier::try_from(2).unwrap()];
+    let helper_4 = &old_shares[&Identifier::try_from(4).unwrap()];
+
+    // They will reshare the key amongst themselves, plus new signer 5.
+    // Signer 3 will be excluded.
+    let new_signer_5_ident = Identifier::try_from(5).unwrap();
+    let new_signer_6_ident = Identifier::try_from(6).unwrap();
+    let new_signer_idents = [
+        helper_1.identifier().clone(),
+        helper_2.identifier().clone(),
+        helper_4.identifier().clone(),
+        new_signer_5_ident.clone(),
+        new_signer_6_ident.clone(),
+    ];
+
+    // The threshold will be changed from 3 to 2.
+    let new_min_signers = 4;
+
+    // Each helper generates their random coefficients and commitments.
+    let helper_1_subshares = reshare_step_1(
+        &helper_1.signing_share(),
+        &mut rng,
+        new_min_signers,
+        &new_signer_idents,
+    )
+    .expect("error computing resharing step 1 for helper 1");
+
+    let helper_2_subshares = reshare_step_1(
+        &helper_2.signing_share(),
+        &mut rng,
+        new_min_signers,
+        &new_signer_idents,
+    )
+    .expect("error computing resharing step 1 for helper 2");
+
+    let helper_4_subshares = reshare_step_1(
+        &helper_4.signing_share(),
+        &mut rng,
+        new_min_signers,
+        &new_signer_idents,
+    )
+    .expect("error computing resharing step 1 for helper 4");
+
+    let all_subshares = BTreeMap::from([
+        (helper_1.identifier(), helper_1_subshares),
+        (helper_2.identifier(), helper_2_subshares),
+        (helper_4.identifier(), helper_4_subshares),
+    ]);
+
+    // Sort the subshares into a map of `recipient => sender => subshare`.
+    let received_subshares = new_signer_idents
+        .into_iter()
+        .map(|recipient_id| {
+            let received_subshares = all_subshares
+                .iter()
+                .map(|(&sender_id, sender_shares)| {
+                    (sender_id.clone(), sender_shares[&recipient_id].clone())
+                })
+                .collect::<BTreeMap<_, _>>();
+            (recipient_id, received_subshares)
+        })
+        .collect::<BTreeMap<_, BTreeMap<_, SecretSubshare>>>();
+
+    // Recipients of the resharing can now validate and compute their new shares.
+
+    let (new_seckeys_1, new_pubkeys_1) = reshare_step_2(
+        helper_1.identifier().clone(),
+        &old_pubkeys,
+        new_min_signers,
+        new_signer_idents.as_slice(),
+        &received_subshares[&helper_1.identifier()],
+    )
+    .expect("error computing reshared share for signer 1");
+
+    let (new_seckeys_2, new_pubkeys_2) = reshare_step_2(
+        helper_2.identifier().clone(),
+        &old_pubkeys,
+        new_min_signers,
+        &new_signer_idents,
+        &received_subshares[&helper_2.identifier()],
+    )
+    .expect("error computing reshared share for signer 2");
+
+    let (new_seckeys_4, new_pubkeys_4) = reshare_step_2(
+        helper_4.identifier().clone(),
+        &old_pubkeys,
+        new_min_signers,
+        &new_signer_idents,
+        &received_subshares[&helper_4.identifier()],
+    )
+    .expect("error computing reshared share for signer 4");
+
+    let (new_seckeys_5, new_pubkeys_5) = reshare_step_2(
+        new_signer_5_ident,
+        &old_pubkeys,
+        new_min_signers,
+        &new_signer_idents,
+        &received_subshares[&new_signer_5_ident],
+    )
+    .expect("error computing reshared share for signer 5");
+
+    let (new_seckeys_6, new_pubkeys_6) = reshare_step_2(
+        new_signer_6_ident,
+        &old_pubkeys,
+        new_min_signers,
+        &new_signer_idents,
+        &received_subshares[&new_signer_6_ident],
+    )
+    .expect("error computing reshared share for signer 6");
+
+    // all signers should compute the same group pubkeys.
+    assert_eq!(new_pubkeys_1, new_pubkeys_2);
+    assert_eq!(new_pubkeys_1, new_pubkeys_4);
+    assert_eq!(new_pubkeys_1, new_pubkeys_5);
+    assert_eq!(new_pubkeys_1, new_pubkeys_6);
+    assert_eq!(new_seckeys_1.verifying_key(), new_seckeys_2.verifying_key());
+    assert_eq!(new_seckeys_1.verifying_key(), new_seckeys_4.verifying_key());
+    assert_eq!(new_seckeys_1.verifying_key(), new_seckeys_5.verifying_key());
+    assert_eq!(new_seckeys_1.verifying_key(), new_seckeys_6.verifying_key());
+
+    // The new pubkey package should be the same group key as the old one,
+    // but with new coefficients and shares.
+    assert_eq!(new_pubkeys_1.verifying_key(), old_pubkeys.verifying_key());
+    assert_ne!(
+        new_pubkeys_1.verifying_shares(),
+        old_pubkeys.verifying_shares()
+    );
+
+    assert_eq!(new_seckeys_1.min_signers(), &new_min_signers);
 }

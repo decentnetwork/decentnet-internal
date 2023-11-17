@@ -17,3 +17,4 @@ cid = { workspace = true }
 bitcoin = { workspace = true, features = ["rand"] }
 rand = { workspace = true }
 frost-secp256k1 = { workspace = true }
+frost-ristretto255 = { workspace = true }
