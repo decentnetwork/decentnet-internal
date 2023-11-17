@@ -11,7 +11,7 @@ signs_required = 1                                      # Number of signatures r
 signers = [ "15UYrA7aXr2Nto1Gg4yWXpY3EAJwafMTNk",       # List of Signers for this manifest
             "1HeLLo4uzjaLetFx6NH3PMwFP3qbRbTf3D" ]      # Can omit this sign in manifest.toml since we need only one signature required
 
-[signer]
+[[signatures]]
 address = "15UYrA7aXr2Nto1Gg4yWXpY3EAJwafMTNk"          # Address of signer
 sign = ""                                               # Signature of 1HeLLo4uzjaLetFx6NH3PMwFP3qbRbTf3D
 instant = "2023-01-01T00:00:00Z"     

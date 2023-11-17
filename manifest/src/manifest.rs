@@ -191,4 +191,27 @@ mod tests {
         let mut file = File::create("tests/tmp/manifest.toml").unwrap();
         file.write_all(content.as_bytes()).unwrap();
     }
+
+    #[test]
+    fn test_manifest2_deserialize() {
+        let file = File::open("tests/manifest2.toml").unwrap();
+        let content = read_to_string(file).unwrap();
+
+        let manifest_file = PodManifest::from_string(&content);
+
+        assert!(manifest_file.is_some());
+    }
+
+    #[test]
+    fn test_manifest2_serialize() {
+        let manifest = File::open("tests/manifest2.toml").unwrap();
+        let content = read_to_string(manifest).unwrap();
+
+        let manifest_file = PodManifest::from_string(&content).unwrap();
+        let content = toml::to_string(&manifest_file).unwrap();
+
+        // save to file
+        let mut file = File::create("tests/tmp/manifest2.toml").unwrap();
+        file.write_all(content.as_bytes()).unwrap();
+    }
 }

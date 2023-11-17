@@ -41,10 +41,14 @@ language = "en"
 [meta.pod]                                              # pod specific meta data
 address = "15UYrA7aXr2Nto1Gg4yWXpY3EAJwafMTNk"          # address of pod
 address_index = 6993755                                 # index of address
+title= "Dashboard"                                      # title of pod
 description = "Decentralized Forum from ZeroNetX Team." # description of pod
 background-color = "#F5F5F5"                            # background color of pod
 background-color-dark = "#2e2b32"                       # dark background color of pod
 domain = "ThreadIt.bit"                                 # domain of pod
+modified = "2023-01-01T00:00:00Z"                       # last modified time of pod
+postmessage_nonce_security = true                       # postmessage nonce security
+inner_path = "content.json"                            # inner path of manifest
 
 [meta.pod.parent]
 address = "15UYrA7aXr2Nto1Gg4yWXpY3EAJwafMTNk"          # address of parent pod
