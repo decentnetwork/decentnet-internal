@@ -1,10 +1,11 @@
 use chrono::{DateTime, Utc};
+use multihash::Multihash;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, PartialOrd, Eq, Ord)]
 pub struct PodFileRoot {
     /// Root Hash of all files
-    hash: String,
+    hash: Multihash<64>,
     /// Sign of this file content
     sign: String,
     /// Files in this pod
@@ -29,7 +30,7 @@ pub struct PodFile {
     /// Path of this file, relative to manifest.toml
     path: String,
     /// Hash of this file
-    hash: String,
+    hash: Multihash<64>,
     /// Size of this file in bytes
     size: usize,
     /// Last modified time of this file
