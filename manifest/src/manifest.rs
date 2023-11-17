@@ -1,9 +1,12 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, PartialEq, PartialOrd, Eq, Ord, Serialize, Deserialize)]
+use crate::file::PodFileRoot;
+
+#[derive(Default, Debug, PartialEq, PartialOrd, Eq, Ord, Serialize, Deserialize)]
 pub struct PodManifest {
-    pub files: PodManifestFiles,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub files: Option<PodManifestFiles>,
     pub signature: PodManifestSignature,
     pub signatures: Vec<PodManifestSigns>,
     pub extensions: Option<PodManifestExtension>,
@@ -20,9 +23,10 @@ impl PodManifest {
     }
 }
 
-#[derive(Debug, PartialEq, PartialOrd, Eq, Ord, Serialize, Deserialize)]
+#[derive(Default, Debug, PartialEq, PartialOrd, Eq, Ord, Serialize, Deserialize)]
 pub struct PodManifestFiles {
     /// Separate manifest for files, Default Path: files.toml
+    #[serde(default = "default_files_manifest_path")]
     pub manifest: String,
     /// Size of files.toml
     pub size: usize,
@@ -30,9 +34,16 @@ pub struct PodManifestFiles {
     pub hash: String,
     /// Last modified time of files.toml
     pub modified: DateTime<Utc>,
+
+    #[serde(skip)]
+    pub file_root: PodFileRoot,
 }
 
-#[derive(Debug, PartialEq, PartialOrd, Eq, Ord, Serialize, Deserialize)]
+fn default_files_manifest_path() -> String {
+    "files.toml".to_string()
+}
+
+#[derive(Default, Debug, PartialEq, PartialOrd, Eq, Ord, Serialize, Deserialize)]
 pub struct PodManifestSignature {
     /// Primary signer of manifest, this is usually the pod address
     pub primary: String,
@@ -90,10 +101,12 @@ pub struct PodManifestMetaPrev {
 }
 
 /// client specific meta data
-#[derive(Debug, PartialEq, PartialOrd, Eq, Ord, Serialize, Deserialize)]
+#[derive(Default, Debug, PartialEq, PartialOrd, Eq, Ord, Serialize, Deserialize)]
 pub struct PodManifestMetaClient {
     pub version: String,
+    #[serde(skip_serializing_if = "String::is_empty")]
     pub platform: String,
+    #[serde(skip_serializing_if = "String::is_empty")]
     pub language: String,
 }
 
@@ -103,23 +116,37 @@ pub struct PodManifestMetaClient {
 /// we need this meta. Address of pod must be one of the signers.
 /// Since signers are isolated from this meta, we can consider pods without this meta as local pods.
 /// TODO! Move ZeroNet specific fields to meta.legacy
-#[derive(Debug, PartialEq, PartialOrd, Eq, Ord, Serialize, Deserialize)]
+#[derive(Default, Debug, PartialEq, PartialOrd, Eq, Ord, Serialize, Deserialize)]
 pub struct PodManifestMetaPod {
     /// address of pod
     pub address: String,
     /// index of address
     pub address_index: usize,
+    /// title of pod
+    pub title: String,
     /// description of pod
     pub description: String,
     /// background color of pod
+    #[serde(skip_serializing_if = "String::is_empty")]
     #[serde(rename = "background-color")]
     pub background_color: String,
     /// dark background color of pod
+    #[serde(skip_serializing_if = "String::is_empty")]
     #[serde(rename = "background-color-dark")]
     pub background_color_dark: String,
     /// domain of pod
+    #[serde(skip_serializing_if = "String::is_empty")]
     pub domain: String,
     pub parent: Option<PodManifestMetaPodParent>,
+
+    /// pod last modified
+    pub modified: DateTime<Utc>,
+
+    /// postmessage_nonce_security
+    pub postmessage_nonce_security: bool,
+
+    /// inner path of this meta
+    pub inner_path: String,
 }
 
 #[derive(Debug, PartialEq, PartialOrd, Eq, Ord, Serialize, Deserialize)]
