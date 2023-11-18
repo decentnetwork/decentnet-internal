@@ -5,13 +5,14 @@ use std::{
 };
 
 use serde_bytes::ByteBuf;
-use zerucontent::Content;
+use zerucontent::{Content, Include};
 
 use crate::{
     file::PodFileRoot,
     io::IO,
     manifest::{
-        PodManifest, PodManifestFiles, PodManifestMeta, PodManifestMetaClient, PodManifestMetaPod,
+        PodManifest, PodManifestExtension, PodManifestExtensionInternal, PodManifestFiles,
+        PodManifestMeta, PodManifestMetaClient, PodManifestMetaPod, PodManifestMetaPodParent,
         PodManifestSignature, PodManifestSigns,
     },
 };
@@ -64,7 +65,43 @@ impl PodManifest {
                     instant: modified,
                 })
                 .collect(),
-            extensions: None,
+            extensions: {
+                if content.includes.is_empty() {
+                    None
+                } else {
+                    Some(PodManifestExtension {
+                        internal: {
+                            if !content.includes.is_empty() {
+                                Some(
+                                    content
+                                        .includes
+                                        .iter()
+                                        .map(
+                                            |(
+                                                path,
+                                                Include {
+                                                    signers,
+                                                    signers_required,
+                                                    ..
+                                                },
+                                            )| {
+                                                PodManifestExtensionInternal {
+                                                    path: path.clone(),
+                                                    signers: signers.clone(),
+                                                    signs_required: (*signers_required) as usize,
+                                                }
+                                            },
+                                        )
+                                        .collect(),
+                                )
+                            } else {
+                                None
+                            }
+                        },
+                        ..Default::default()
+                    })
+                }
+            },
             meta: Some(PodManifestMeta {
                 client: Some(PodManifestMetaClient {
                     version: content.zeronet_version,
@@ -81,9 +118,28 @@ impl PodManifest {
                     postmessage_nonce_security: content.postmessage_nonce_security,
                     background_color: content.background_color,
                     background_color_dark: content.background_color_dark,
-                    viewport: Some(content.viewport),
-                    translate: Some(content.translate),
-                    ..Default::default()
+                    viewport: (!content.viewport.is_empty()).then_some(content.viewport),
+                    translate: (!content.translate.is_empty()).then_some(content.translate),
+                    allow_cloning: content.cloneable.then_some(true),
+                    domain: content.domain,
+                    parent: {
+                        if content.cloned_from.is_empty() && content.clone_root.is_empty() {
+                            None
+                        } else {
+                            Some(PodManifestMetaPodParent {
+                                address: content.cloned_from,
+                                template_root: content.clone_root,
+                            })
+                        }
+                    },
+                    settings: {
+                        if !content.settings.is_empty() {
+                            Some(content.settings.clone())
+                        } else {
+                            None
+                        }
+                    },
+                    data: None,
                 }),
                 prev: None,
             }),
@@ -121,6 +177,8 @@ impl PodManifest {
             }
             if let Some(pod) = &meta.pod {
                 content.address = pod.address.clone();
+                content.cloneable = pod.allow_cloning.unwrap_or_default();
+                content.domain = pod.domain.clone();
                 content.description = pod.description.clone();
                 content.address_index = pod.address_index as u32;
                 content.title = pod.title.clone();
@@ -135,9 +193,34 @@ impl PodManifest {
                 if let Some(translate) = &pod.translate {
                     content.translate = translate.clone();
                 }
+                if let Some(parent) = &pod.parent {
+                    content.cloned_from = parent.address.clone();
+                    content.clone_root = parent.template_root.clone();
+                }
+                if let Some(settings) = &pod.settings {
+                    content.settings = settings.clone();
+                }
             }
             if let Some(ignore) = &meta.ignore {
                 content.ignore = ignore.clone();
+            }
+        }
+        if let Some(extensions) = &self.extensions {
+            if let Some(internal) = &extensions.internal {
+                content.includes =
+                    internal
+                        .iter()
+                        .fold(std::collections::BTreeMap::new(), |mut map, internal| {
+                            map.insert(
+                                internal.path.clone(),
+                                Include {
+                                    signers: internal.signers.clone(),
+                                    signers_required: internal.signs_required as u64,
+                                    ..Default::default()
+                                },
+                            );
+                            map
+                        });
             }
         }
         content
@@ -201,6 +284,8 @@ mod tests {
     const TEST_TMP_DIR_EMPTY: &str = "tests/tmp/data/zeronet/empty";
     const TEST_DATA_DIR_HELLO: &str = "tests/data/zeronet/hello";
     const TEST_TMP_DIR_HELLO: &str = "tests/tmp/data/zeronet/hello";
+    const TEST_DATA_DIR_TALK: &str = "tests/data/zeronet/talk";
+    const TEST_TMP_DIR_TALK: &str = "tests/tmp/data/zeronet/talk";
 
     #[test]
     fn test_is_zeronet_site() {
@@ -281,6 +366,31 @@ mod tests {
         let bytes = ByteBuf::from(serde_json::to_vec(&content).unwrap());
         let content = Content::from_buf(bytes).unwrap();
         PodManifest::save_content(TEST_TMP_DIR_HELLO, content.clone());
+        let verify = content.verify(content.address.clone());
+        assert!(verify);
+    }
+    #[test]
+    fn test_pod_manifest_from_content_talk() {
+        let path = format!("{}/{}", TEST_DATA_DIR_TALK, "content.json");
+        let root = PodManifest::load_from_path(path).unwrap();
+        assert!(root.files.is_some());
+    }
+
+    #[test]
+    fn test_pod_manifest_save_talk() {
+        let path = format!("{}/{}", TEST_DATA_DIR_TALK, "content.json");
+        let root = PodManifest::load_from_path(path).unwrap();
+        root.save(TEST_TMP_DIR_TALK);
+    }
+
+    #[test]
+    fn test_pod_content_save_verify_talk() {
+        let path = format!("{}/{}", TEST_DATA_DIR_TALK, "content.json");
+        let root = PodManifest::load_from_path(path).unwrap();
+        let content = root.to_content();
+        let bytes = ByteBuf::from(serde_json::to_vec(&content).unwrap());
+        let content = Content::from_buf(bytes).unwrap();
+        PodManifest::save_content(TEST_TMP_DIR_TALK, content.clone());
         let verify = content.verify(content.address.clone());
         assert!(verify);
     }

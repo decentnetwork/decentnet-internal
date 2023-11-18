@@ -16,8 +16,11 @@ address = "15UYrA7aXr2Nto1Gg4yWXpY3EAJwafMTNk"          # Address of signer, Thi
 sign = ""                                               # Signature of 1HeLLo4uzjaLetFx6NH3PMwFP3qbRbTf3D
 instant = "2023-01-01T00:00:00Z"                        # Date of signature
 
-[extensions.internal]                                   # internal manifests
+[[extensions.internal]]                                   # internal manifests
 path = "data/manifest.toml"                             # path to internal manifest
+signs_required = 1                                      # Number of signatures required to consider this internal manifest changes to be valid
+signers = [ "15UYrA7aXr2Nto1Gg4yWXpY3EAJwafMTNk",       # List of Signers for this internal manifest
+            "1HeLLo4uzjaLetFx6NH3PMwFP3qbRbTf3D" ]      # Can omit this sign of this signer in manifest.toml since we need only one signature required
 
 [extensions.external]                                   # external manifests like merger sites
 
@@ -49,10 +52,10 @@ domain = "ThreadIt.bit"                                 # domain of pod
 modified = "2023-01-01T00:00:00Z"                       # last modified time of pod
 postmessage_nonce_security = true                       # postmessage nonce security
 inner_path = "content.json"                            # inner path of manifest
+allow_cloning = true                                    # allow cloning of pod          
 
 [meta.pod.parent]
 address = "15UYrA7aXr2Nto1Gg4yWXpY3EAJwafMTNk"          # address of parent pod
 template_root = ""                                      # root of template                                
-allow_cloning = true                                    # allow cloning of pod          
 
 

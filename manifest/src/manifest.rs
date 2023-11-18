@@ -1,9 +1,12 @@
+use std::collections::BTreeMap;
+
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 use crate::file::PodFileRoot;
 
-#[derive(Default, Debug, PartialEq, PartialOrd, Eq, Ord, Serialize, Deserialize)]
+#[derive(Default, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PodManifest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub files: Option<PodManifestFiles>,
@@ -43,6 +46,10 @@ fn default_files_manifest_path() -> String {
     "files.toml".to_string()
 }
 
+pub fn is_default<T: Default + PartialEq>(t: &T) -> bool {
+    t == &T::default()
+}
+
 #[derive(Default, Debug, PartialEq, PartialOrd, Eq, Ord, Serialize, Deserialize)]
 pub struct PodManifestSignature {
     /// Primary signer of manifest, this is usually the pod address
@@ -66,23 +73,27 @@ pub struct PodManifestSigns {
     pub instant: DateTime<Utc>,
 }
 
-#[derive(Debug, PartialEq, PartialOrd, Eq, Ord, Serialize, Deserialize)]
+#[derive(Default, Debug, PartialEq, PartialOrd, Eq, Ord, Serialize, Deserialize)]
 pub struct PodManifestExtension {
     /// internal manifests
-    pub internal: PodManifestExtensionInternal,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub internal: Option<Vec<PodManifestExtensionInternal>>,
     /// external manifests like merger sites
-    pub external: PodManifestExtensionExternal,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub external: Option<PodManifestExtensionExternal>,
 }
 
 #[derive(Debug, PartialEq, PartialOrd, Eq, Ord, Serialize, Deserialize)]
 pub struct PodManifestExtensionInternal {
     pub path: String,
+    pub signers: Vec<String>,
+    pub signs_required: usize,
 }
 
 #[derive(Debug, PartialEq, PartialOrd, Eq, Ord, Serialize, Deserialize)]
 pub struct PodManifestExtensionExternal {}
 
-#[derive(Debug, PartialEq, PartialOrd, Eq, Ord, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PodManifestMeta {
     pub ignore: Option<String>,
     pub prev: Option<PodManifestMetaPrev>,
@@ -116,11 +127,12 @@ pub struct PodManifestMetaClient {
 /// we need this meta. Address of pod must be one of the signers.
 /// Since signers are isolated from this meta, we can consider pods without this meta as local pods.
 /// TODO! Move ZeroNet specific fields to meta.legacy
-#[derive(Default, Debug, PartialEq, PartialOrd, Eq, Ord, Serialize, Deserialize)]
+#[derive(Default, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PodManifestMetaPod {
     /// address of pod
     pub address: String,
     /// index of address
+    #[serde(skip_serializing_if = "is_default")]
     pub address_index: usize,
     /// title of pod
     pub title: String,
@@ -138,6 +150,12 @@ pub struct PodManifestMetaPod {
     /// domain of pod
     #[serde(skip_serializing_if = "String::is_empty")]
     pub domain: String,
+
+    /// allow cloning of pod
+    pub allow_cloning: Option<bool>,
+
+    /// parent details of pod if cloned from another pod
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub parent: Option<PodManifestMetaPodParent>,
 
     /// pod last modified
@@ -154,16 +172,22 @@ pub struct PodManifestMetaPod {
 
     /// translation supported pod files
     pub translate: Option<Vec<String>>,
+
+    /// settings of pod
+    pub settings: Option<BTreeMap<String, Value>>,
+
+    /// additional zeronet site specific data
+    pub data: Option<BTreeMap<String, Value>>,
 }
 
 #[derive(Debug, PartialEq, PartialOrd, Eq, Ord, Serialize, Deserialize)]
 pub struct PodManifestMetaPodParent {
     /// address of parent pod
+    #[serde(skip_serializing_if = "String::is_empty")]
     pub address: String,
     /// root of template
+    #[serde(skip_serializing_if = "String::is_empty")]
     pub template_root: String,
-    /// allow cloning of pod
-    pub allow_cloning: bool,
 }
 
 #[cfg(test)]
