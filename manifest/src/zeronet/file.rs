@@ -14,8 +14,8 @@ use crate::{
 
 use super::utils::datetime_from_number;
 
-impl PodFileRoot {
-    pub fn from_content(content: &Content) -> PodFileRoot {
+impl From<&Content> for PodFileRoot {
+    fn from(content: &Content) -> PodFileRoot {
         let mut root = PodFileRoot::default();
         let modified = datetime_from_number(content.modified.clone());
         for (path, file) in &content.files {
@@ -62,7 +62,7 @@ impl IO for PodFileRoot {
         if let Ok(buf) = std::fs::read(path) {
             let bytes = ByteBuf::from(buf);
             let content = Content::from_buf(bytes).unwrap();
-            Some(PodFileRoot::from_content(&content))
+            Some(PodFileRoot::from(&content))
         } else {
             None
         }

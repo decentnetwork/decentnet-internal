@@ -31,121 +31,6 @@ impl PodManifest {
         self.files.is_some()
     }
 
-    pub fn from_content(path: impl AsRef<Path>) -> PodManifest {
-        let buf = std::fs::read(path).unwrap();
-        let bytes = ByteBuf::from(buf);
-        let content = Content::from_buf(bytes).unwrap();
-        let file_root = PodFileRoot::from_content(&content);
-        let modified = datetime_from_number(content.modified);
-        let files = if content.files.is_empty() {
-            None
-        } else {
-            Some(PodManifestFiles {
-                manifest: "files.toml".to_string(),
-                size: 0,
-                hash: "".to_string(),
-                modified,
-                file_root,
-            })
-        };
-        PodManifest {
-            files,
-            signature: PodManifestSignature {
-                primary: content.address.clone(),
-                root_sign: content.signers_sign,
-                signs_required: content.signs_required,
-                signers: content.signs.keys().cloned().collect(),
-            },
-            signatures: content
-                .signs
-                .iter()
-                .map(|(address, sign)| PodManifestSigns {
-                    address: address.clone(),
-                    sign: sign.clone(),
-                    instant: modified,
-                })
-                .collect(),
-            extensions: {
-                if content.includes.is_empty() {
-                    None
-                } else {
-                    Some(PodManifestExtension {
-                        internal: {
-                            if !content.includes.is_empty() {
-                                Some(
-                                    content
-                                        .includes
-                                        .iter()
-                                        .map(
-                                            |(
-                                                path,
-                                                Include {
-                                                    signers,
-                                                    signers_required,
-                                                    ..
-                                                },
-                                            )| {
-                                                PodManifestExtensionInternal {
-                                                    path: path.clone(),
-                                                    signers: signers.clone(),
-                                                    signs_required: (*signers_required) as usize,
-                                                }
-                                            },
-                                        )
-                                        .collect(),
-                                )
-                            } else {
-                                None
-                            }
-                        },
-                        ..Default::default()
-                    })
-                }
-            },
-            meta: Some(PodManifestMeta {
-                client: Some(PodManifestMetaClient {
-                    version: content.zeronet_version,
-                    ..Default::default()
-                }),
-                ignore: Some(content.ignore),
-                pod: Some(PodManifestMetaPod {
-                    address: content.address,
-                    description: content.description,
-                    address_index: content.address_index as usize,
-                    title: content.title,
-                    inner_path: content.inner_path,
-                    modified,
-                    postmessage_nonce_security: content.postmessage_nonce_security,
-                    background_color: content.background_color,
-                    background_color_dark: content.background_color_dark,
-                    viewport: (!content.viewport.is_empty()).then_some(content.viewport),
-                    translate: (!content.translate.is_empty()).then_some(content.translate),
-                    allow_cloning: content.cloneable.then_some(true),
-                    domain: content.domain,
-                    parent: {
-                        if content.cloned_from.is_empty() && content.clone_root.is_empty() {
-                            None
-                        } else {
-                            Some(PodManifestMetaPodParent {
-                                address: content.cloned_from,
-                                template_root: content.clone_root,
-                            })
-                        }
-                    },
-                    settings: {
-                        if !content.settings.is_empty() {
-                            Some(content.settings.clone())
-                        } else {
-                            None
-                        }
-                    },
-                    data: None,
-                }),
-                prev: None,
-            }),
-        }
-    }
-
     pub fn to_content(&self) -> Content {
         let mut content = Content::default();
         if let Some(files) = &self.files {
@@ -240,6 +125,132 @@ impl PodManifest {
     }
 }
 
+impl From<&Path> for PodManifest {
+    fn from(path: &Path) -> PodManifest {
+        let buf = std::fs::read(path).unwrap();
+        let bytes = ByteBuf::from(buf);
+        let content = Content::from_buf(bytes).unwrap();
+        PodManifest::from(&content)
+    }
+}
+
+impl From<&Content> for PodManifest {
+    fn from(content: &Content) -> PodManifest {
+        PodManifest {
+            files: (!content.files.is_empty()).then_some(PodManifestFiles::from(content)),
+            signature: PodManifestSignature::from(content),
+            signatures: content
+                .signs
+                .iter()
+                .map(|(address, sign)| PodManifestSigns {
+                    address: address.clone(),
+                    sign: sign.clone(),
+                    instant: datetime_from_number(content.modified.clone()),
+                })
+                .collect(),
+            extensions: (!content.includes.is_empty())
+                .then_some(PodManifestExtension::from(content)),
+            meta: Some(PodManifestMeta::from(content)),
+        }
+    }
+}
+
+impl From<&Content> for PodManifestFiles {
+    fn from(content: &Content) -> PodManifestFiles {
+        let file_root = PodFileRoot::from(content);
+        let modified = datetime_from_number(content.modified.clone());
+        PodManifestFiles {
+            manifest: "files.toml".to_string(),
+            size: 0,
+            hash: "".to_string(),
+            modified,
+            file_root,
+        }
+    }
+}
+
+impl From<&Content> for PodManifestSignature {
+    fn from(content: &Content) -> PodManifestSignature {
+        PodManifestSignature {
+            primary: content.address.clone(),
+            root_sign: content.signers_sign.clone(),
+            signs_required: content.signs_required,
+            signers: content.signs.keys().cloned().collect(),
+        }
+    }
+}
+
+impl From<&Content> for PodManifestMeta {
+    fn from(content: &Content) -> PodManifestMeta {
+        PodManifestMeta {
+            client: Some(PodManifestMetaClient {
+                version: content.zeronet_version.clone(),
+                ..Default::default()
+            }),
+            ignore: Some(content.ignore.clone()),
+            pod: Some(PodManifestMetaPod {
+                address: content.address.clone(),
+                description: content.description.clone(),
+                address_index: content.address_index as usize,
+                title: content.title.clone(),
+                inner_path: content.inner_path.clone(),
+                modified: datetime_from_number(content.modified.clone()),
+                postmessage_nonce_security: content.postmessage_nonce_security,
+                background_color: content.background_color.clone(),
+                background_color_dark: content.background_color_dark.clone(),
+                viewport: (!content.viewport.is_empty()).then_some(content.viewport.clone()),
+                translate: (!content.translate.is_empty()).then_some(content.translate.clone()),
+                allow_cloning: content.cloneable.then_some(true),
+                domain: content.domain.clone(),
+                parent: (!(content.cloned_from.is_empty() && content.clone_root.is_empty()))
+                    .then_some(PodManifestMetaPodParent {
+                        address: content.cloned_from.clone(),
+                        template_root: content.clone_root.clone(),
+                    }),
+                settings: { (!content.settings.is_empty()).then_some(content.settings.clone()) },
+                data: None,
+            }),
+            prev: None,
+        }
+    }
+}
+
+impl From<&Content> for PodManifestExtension {
+    fn from(content: &Content) -> PodManifestExtension {
+        PodManifestExtension {
+            internal: {
+                if !content.includes.is_empty() {
+                    Some(
+                        content
+                            .includes
+                            .iter()
+                            .map(
+                                |(
+                                    path,
+                                    Include {
+                                        signers,
+                                        signers_required,
+                                        ..
+                                    },
+                                )| {
+                                    PodManifestExtensionInternal {
+                                        path: path.clone(),
+                                        signers: signers.clone(),
+                                        signs_required: (*signers_required) as usize,
+                                    }
+                                },
+                            )
+                            .collect(),
+                    )
+                } else {
+                    None
+                }
+            },
+            ..Default::default()
+        }
+    }
+}
+
 impl IO for PodManifest {
     type Item = PodManifest;
 
@@ -265,7 +276,7 @@ impl IO for PodManifest {
     }
 
     fn load_from_path(path: impl AsRef<Path>) -> Option<Self::Item> {
-        let manifest = PodManifest::from_content(path);
+        let manifest = PodManifest::from(path.as_ref());
         Some(manifest)
     }
 }
@@ -344,6 +355,7 @@ mod tests {
         assert!(verify);
         PodManifest::save_content(TEST_TMP_DIR_EMPTY, content);
     }
+
     #[test]
     fn test_pod_manifest_from_content_hello() {
         let path = format!("{}/{}", TEST_DATA_DIR_HELLO, "content.json");
@@ -369,6 +381,7 @@ mod tests {
         let verify = content.verify(content.address.clone());
         assert!(verify);
     }
+
     #[test]
     fn test_pod_manifest_from_content_talk() {
         let path = format!("{}/{}", TEST_DATA_DIR_TALK, "content.json");
