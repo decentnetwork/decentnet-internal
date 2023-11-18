@@ -26,4 +26,6 @@ rand = "0.8.5"
 frost-secp256k1 = "0.7.0"
 frost-ristretto255 = { git = "https://github.com/ZcashFoundation/frost.git", rev = "621f79e59e42e255c34a90daffe9968b55f7c151" }
 zeronet_cryptography = { git = "https://github.com/decentnetwork/zeronet_cryptography.git", branch = "master" }
-zerucontent = { git = "https://github.com/decentnetwork/zerucontent.git", branch = "decentnet" }
+zerucontent = { git = "https://github.com/decentnetwork/zerucontent.git", branch = "decentnet", features = [
+    "decentnet-toml",
+] }
