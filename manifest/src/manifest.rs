@@ -42,7 +42,7 @@ pub struct PodManifestFiles {
     pub file_root: PodFileRoot,
 }
 
-fn default_files_manifest_path() -> String {
+pub fn default_files_manifest_path() -> String {
     "files.toml".to_string()
 }
 
