@@ -78,6 +78,8 @@ mod tests {
     const TEST_TMP_DIR_BARE: &str = "tests/tmp/data/zeronet/bare";
     const TEST_DATA_DIR_EMPTY: &str = "tests/data/zeronet/empty";
     const TEST_TMP_DIR_EMPTY: &str = "tests/tmp/data/zeronet/empty";
+    const TEST_DATA_DIR_HELLO: &str = "tests/data/zeronet/hello";
+    const TEST_TMP_DIR_HELLO: &str = "tests/tmp/data/zeronet/hello";
 
     #[test]
     fn test_is_zeronet_site() {
@@ -111,5 +113,19 @@ mod tests {
         let path = format!("{}{}", TEST_DATA_DIR_EMPTY, "/content.json");
         let root = PodFileRoot::load_from_path(path).unwrap();
         root.save(TEST_TMP_DIR_EMPTY);
+    }
+
+    #[test]
+    fn test_pod_root_file_from_content_hello() {
+        let path = format!("{}{}", TEST_DATA_DIR_HELLO, "/content.json");
+        let root = PodFileRoot::load_from_path(path).unwrap();
+        assert_eq!(root.files.len(), 32);
+    }
+
+    #[test]
+    fn test_pod_root_file_save_hello() {
+        let path = format!("{}{}", TEST_DATA_DIR_HELLO, "/content.json");
+        let root = PodFileRoot::load_from_path(path).unwrap();
+        root.save(TEST_TMP_DIR_HELLO);
     }
 }

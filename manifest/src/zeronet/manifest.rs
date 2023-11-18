@@ -70,7 +70,7 @@ impl PodManifest {
                     version: content.zeronet_version,
                     ..Default::default()
                 }),
-                ignore: Some("".to_string()),
+                ignore: Some(content.ignore),
                 pod: Some(PodManifestMetaPod {
                     address: content.address,
                     description: content.description,
@@ -79,6 +79,10 @@ impl PodManifest {
                     inner_path: content.inner_path,
                     modified,
                     postmessage_nonce_security: content.postmessage_nonce_security,
+                    background_color: content.background_color,
+                    background_color_dark: content.background_color_dark,
+                    viewport: Some(content.viewport),
+                    translate: Some(content.translate),
                     ..Default::default()
                 }),
                 prev: None,
@@ -123,6 +127,17 @@ impl PodManifest {
                 content.inner_path = pod.inner_path.clone();
                 content.modified = number_from_datetime(pod.modified);
                 content.postmessage_nonce_security = pod.postmessage_nonce_security;
+                content.background_color = pod.background_color.clone();
+                content.background_color_dark = pod.background_color_dark.clone();
+                if let Some(viewport) = &pod.viewport {
+                    content.viewport = viewport.clone();
+                }
+                if let Some(translate) = &pod.translate {
+                    content.translate = translate.clone();
+                }
+            }
+            if let Some(ignore) = &meta.ignore {
+                content.ignore = ignore.clone();
             }
         }
         content
@@ -184,6 +199,8 @@ mod tests {
     const TEST_TMP_DIR_BARE: &str = "tests/tmp/data/zeronet/bare";
     const TEST_DATA_DIR_EMPTY: &str = "tests/data/zeronet/empty";
     const TEST_TMP_DIR_EMPTY: &str = "tests/tmp/data/zeronet/empty";
+    const TEST_DATA_DIR_HELLO: &str = "tests/data/zeronet/hello";
+    const TEST_TMP_DIR_HELLO: &str = "tests/tmp/data/zeronet/hello";
 
     #[test]
     fn test_is_zeronet_site() {
@@ -241,5 +258,30 @@ mod tests {
         let verify = content.verify(content.address.clone());
         assert!(verify);
         PodManifest::save_content(TEST_TMP_DIR_EMPTY, content);
+    }
+    #[test]
+    fn test_pod_manifest_from_content_hello() {
+        let path = format!("{}/{}", TEST_DATA_DIR_HELLO, "content.json");
+        let root = PodManifest::load_from_path(path).unwrap();
+        assert!(root.files.is_some());
+    }
+
+    #[test]
+    fn test_pod_manifest_save_hello() {
+        let path = format!("{}/{}", TEST_DATA_DIR_HELLO, "content.json");
+        let root = PodManifest::load_from_path(path).unwrap();
+        root.save(TEST_TMP_DIR_HELLO);
+    }
+
+    #[test]
+    fn test_pod_content_save_verify_hello() {
+        let path = format!("{}/{}", TEST_DATA_DIR_HELLO, "content.json");
+        let root = PodManifest::load_from_path(path).unwrap();
+        let content = root.to_content();
+        let bytes = ByteBuf::from(serde_json::to_vec(&content).unwrap());
+        let content = Content::from_buf(bytes).unwrap();
+        PodManifest::save_content(TEST_TMP_DIR_HELLO, content.clone());
+        let verify = content.verify(content.address.clone());
+        assert!(verify);
     }
 }

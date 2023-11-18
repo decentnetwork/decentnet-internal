@@ -148,6 +148,12 @@ pub struct PodManifestMetaPod {
 
     /// inner path of this meta
     pub inner_path: String,
+
+    /// viewport of pod site
+    pub viewport: Option<String>,
+
+    /// translation supported pod files
+    pub translate: Option<Vec<String>>,
 }
 
 #[derive(Debug, PartialEq, PartialOrd, Eq, Ord, Serialize, Deserialize)]
