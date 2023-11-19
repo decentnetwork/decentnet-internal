@@ -16,7 +16,7 @@ pub fn datetime_from_number(modified: Number) -> DateTime<Utc> {
     } else {
         unreachable!("modified is not integer or float");
     };
-    DateTime::from_utc(NaiveDateTime::from_timestamp_millis(epoch).unwrap(), Utc)
+    DateTime::from_naive_utc_and_offset(NaiveDateTime::from_timestamp_millis(epoch).unwrap(), Utc)
 }
 
 pub fn number_from_datetime(modified: DateTime<Utc>) -> Number {
@@ -47,7 +47,7 @@ mod tests {
         use super::number_from_datetime;
         use zerucontent::Number;
 
-        let modified = DateTime::from_utc(
+        let modified = DateTime::from_naive_utc_and_offset(
             NaiveDateTime::from_timestamp_millis(1609977600000).unwrap(),
             chrono::Utc,
         );
