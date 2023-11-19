@@ -1,6 +1,6 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use zerucontent::UserContents;
+use zerucontent::{Cert, UserContents};
 
 use crate::manifest::{PodManifestFiles, PodManifestMetaPrev, PodManifestSigns};
 
@@ -25,6 +25,7 @@ impl PodInternalManifest {
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PodInternalManifestMeta {
     pub ignore: Option<String>,
+    pub cert: Option<Cert>,
     pub prev: Option<PodManifestMetaPrev>,
     pub pod: Option<PodInternalManifestMetaPod>,
     pub user_contents: Option<UserContents>,

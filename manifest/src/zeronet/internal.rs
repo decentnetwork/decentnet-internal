@@ -46,6 +46,8 @@ impl PodInternalManifest {
         let mut user_content_optional_null = false;
 
         if let Some(meta) = &self.meta {
+            content.cert = meta.cert.clone();
+            content.ignore = meta.ignore.clone();
             if let Some(pod) = &meta.pod {
                 content.address = pod.address.clone();
                 content.modified = number_from_datetime(pod.modified);
@@ -54,9 +56,6 @@ impl PodInternalManifest {
                     ..Default::default()
                 };
                 user_content_optional_null = pod.user_contents_optional_null;
-            }
-            if let Some(ignore) = &meta.ignore {
-                content.ignore = ignore.clone();
             }
         }
         if let Some(user_contents) = &self.meta.as_ref().unwrap().user_contents {
@@ -154,10 +153,11 @@ impl From<&Content> for PodInternalManifestMeta {
             }
         }
         Self {
-            ignore: Some(content.ignore.clone()),
+            ignore: content.ignore.clone(),
             prev: None,
             pod: Some(meta),
             user_contents,
+            cert: content.cert.clone(),
         }
     }
 }
@@ -207,6 +207,17 @@ mod tests {
         let content = Content::from_buf(bytes).unwrap();
         PodInternalManifest::save_content(TEST_TMP_DIR_TALK, content.clone());
         let verify = content.verify(content.address.clone());
+        assert!(verify);
+    }
+
+    #[test]
+    fn test_pod_content_save_user_verify_talk() {
+        let path = format!("{}/{}", TEST_DATA_DIR_TALK, "data/users/user1/content.json");
+        let root = PodInternalManifest::load_from_path(path).unwrap();
+        let content = root.to_content();
+        let bytes = ByteBuf::from(serde_json::to_vec(&content).unwrap());
+        let content = Content::from_buf(bytes).unwrap();
+        let verify = content.verify("1AmeB7f5wBfJm6iR7MRZfFh65xkJzaVCX7".into());
         assert!(verify);
     }
 }

@@ -57,6 +57,7 @@ impl PodManifest {
             .map(|sign| (sign.address.clone(), sign.sign.clone()))
             .collect();
         if let Some(meta) = &self.meta {
+            content.ignore = meta.ignore.clone();
             if let Some(client) = &meta.client {
                 content.meta.zeronet_version = Some(client.version.clone());
             }
@@ -85,9 +86,6 @@ impl PodManifest {
                 if let Some(settings) = &pod.settings {
                     content.settings = settings.clone();
                 }
-            }
-            if let Some(ignore) = &meta.ignore {
-                content.ignore = ignore.clone();
             }
         }
         if let Some(extensions) = &self.extensions {
@@ -187,7 +185,7 @@ impl From<&Content> for PodManifestMeta {
                 version: content.meta.clone().zeronet_version.unwrap().clone(),
                 ..Default::default()
             }),
-            ignore: Some(content.ignore.clone()),
+            ignore: content.ignore.clone(),
             pod: Some(PodManifestMetaPod {
                 address: content.address.clone(),
                 description: content.meta.clone().description.unwrap().clone(),
