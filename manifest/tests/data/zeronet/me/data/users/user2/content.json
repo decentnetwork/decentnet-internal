@@ -1,0 +1,16 @@
+{
+ "address": "1UDbADib99KE9d3qZ87NqJF2QLTHmMkoV",
+ "cert_auth_type": "web",
+ "cert_sign": "G7suwq3UAUQyJtvznnFEp4NxkYwLaRd/7vOVAcrfWPzrJf0Cw08/3xdGkuTiwXcOIsdAlTPLXvGkfrBf3T/FfKc=",
+ "cert_user_id": "pramukesh@zeroid.bit",
+ "files": {},
+ "inner_path": "data/userdb/1AmeB7f5wBfJm6iR7MRZfFh65xkJzaVCX7/content.json",
+ "modified": 1678991701,
+ "signs": {"1AmeB7f5wBfJm6iR7MRZfFh65xkJzaVCX7": "HNz5ARtOPvcC7emwOouWA/Rxc1rBYXahFHNShIrxZbUxLjCzSW13u9TduCLu1hg2vElgWLmsBwrNy/6SEnX+KMo="},
+ "user": [
+  {
+   "avatar": "png",
+   "date_added": 1638470325,
+   "hub": "1MoonP8t4rk9QamBUPh5Aspkwa1Xhf5ux2",
+   "intro": "ZeroNetX & ZeroNet Mobile Dev\nhttps://zeronet.dev\n\nZeroId : 1AmeB7f5wBfJm6iR7MRZfFh65xkJzaVCX7\n\nOfficial Site Links : \nClearnet link : https://zeronet.dev\nOfficial Zite on ZeroNetX : [ZeroNetX](/1ZeroNetyV5mKY9JF1gsm82TuBXHpfdLX)\n\nUpdater Link : [Click to update](/1Update8crprmciJHwp2WXqkx2c4iYp18)\nZeroNet Proxy: https://proxy.zeronet.dev","user_name": "PramUkesh"}]
+}

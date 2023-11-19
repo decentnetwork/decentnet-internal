@@ -83,6 +83,9 @@ impl PodInternalManifest {
 
             content.user_contents = Some(user_contents.clone());
         }
+        if let Some(user) = &self.meta.as_ref().unwrap().user {
+            content.other.insert("user".to_string(), user.clone());
+        }
 
         content
     }
@@ -167,12 +170,15 @@ impl From<&Content> for PodInternalManifestMeta {
                 meta.user_contents_optional_null = true;
             }
         }
+        let user = content.other.get("user").cloned();
+
         Self {
             ignore: content.ignore.clone(),
             prev: None,
             pod: Some(meta),
             user_contents,
             cert: content.cert.clone(),
+            user,
         }
     }
 }
@@ -247,6 +253,17 @@ mod tests {
         let content = Content::from_buf(bytes).unwrap();
         PodInternalManifest::save_content(TEST_TMP_DIR_ME, content.clone());
         let verify = content.verify("129AZxKKZFQAyrSxv8ocZtZzPU1Gy6Ua71".into());
+        assert!(verify);
+    }
+
+    #[test]
+    fn test_pod_content_user2_verify_me() {
+        let path = format!("{}/{}", TEST_DATA_DIR_ME, "data/users/user2/content.json");
+        let root = PodInternalManifest::load_from_path(path).unwrap();
+        let content = root.to_content();
+        let bytes = ByteBuf::from(serde_json::to_vec(&content).unwrap());
+        let content = Content::from_buf(bytes).unwrap();
+        let verify = content.verify("1AmeB7f5wBfJm6iR7MRZfFh65xkJzaVCX7".into());
         assert!(verify);
     }
 }

@@ -1,5 +1,7 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+#[cfg(feature = "zeronet")]
+use serde_json::Value;
 use zerucontent::{Cert, UserContents};
 
 use crate::manifest::{PodManifestFiles, PodManifestMetaPrev, PodManifestSigns};
@@ -29,6 +31,8 @@ pub struct PodInternalManifestMeta {
     pub prev: Option<PodManifestMetaPrev>,
     pub pod: Option<PodInternalManifestMetaPod>,
     pub user_contents: Option<UserContents>,
+    #[cfg(feature = "zeronet")]
+    pub user: Option<Value>,
 }
 
 /// pod specific internal meta data
