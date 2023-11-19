@@ -58,16 +58,16 @@ impl PodManifest {
             .collect();
         if let Some(meta) = &self.meta {
             if let Some(client) = &meta.client {
-                content.zeronet_version = client.version.clone();
+                content.meta.zeronet_version = Some(client.version.clone());
             }
             if let Some(pod) = &meta.pod {
                 content.address = pod.address.clone();
                 content.cloneable = pod.allow_cloning.unwrap_or_default();
                 content.domain = pod.domain.clone();
-                content.description = pod.description.clone();
+                content.meta.description = Some(pod.description.clone());
                 content.address_index = pod.address_index as u32;
                 content.title = pod.title.clone();
-                content.inner_path = pod.inner_path.clone();
+                content.meta.inner_path = pod.inner_path.clone();
                 content.modified = number_from_datetime(pod.modified);
                 content.postmessage_nonce_security = pod.postmessage_nonce_security;
                 content.background_color = pod.background_color.clone();
@@ -184,16 +184,16 @@ impl From<&Content> for PodManifestMeta {
     fn from(content: &Content) -> PodManifestMeta {
         PodManifestMeta {
             client: Some(PodManifestMetaClient {
-                version: content.zeronet_version.clone(),
+                version: content.meta.clone().zeronet_version.unwrap().clone(),
                 ..Default::default()
             }),
             ignore: Some(content.ignore.clone()),
             pod: Some(PodManifestMetaPod {
                 address: content.address.clone(),
-                description: content.description.clone(),
+                description: content.meta.clone().description.unwrap().clone(),
                 address_index: content.address_index as usize,
                 title: content.title.clone(),
-                inner_path: content.inner_path.clone(),
+                inner_path: content.meta.inner_path.clone(),
                 modified: datetime_from_number(content.modified.clone()),
                 postmessage_nonce_security: content.postmessage_nonce_security,
                 background_color: content.background_color.clone(),

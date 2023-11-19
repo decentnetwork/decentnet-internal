@@ -6,7 +6,7 @@ use std::{
 
 use serde_bytes::ByteBuf;
 use serde_json::Value;
-use zerucontent::{Content, UserContents};
+use zerucontent::{meta::Meta, Content, UserContents};
 
 use crate::{
     internal::{PodInternalManifest, PodInternalManifestMeta, PodInternalManifestMetaPod},
@@ -14,7 +14,78 @@ use crate::{
     manifest::{PodManifestFiles, PodManifestSigns},
 };
 
-use super::utils::datetime_from_number;
+use super::utils::{datetime_from_number, number_from_datetime};
+
+impl PodInternalManifest {
+    pub fn contains_files(&self) -> bool {
+        self.files.is_some()
+    }
+
+    pub fn to_content(&self) -> Content {
+        let mut content = Content::default();
+        if let Some(files) = &self.files {
+            content.files = files.file_root.files.iter().fold(
+                std::collections::BTreeMap::new(),
+                |mut map, file| {
+                    map.insert(
+                        file.path.clone(),
+                        zerucontent::File {
+                            sha512: file.hash.clone(),
+                            size: file.size,
+                        },
+                    );
+                    map
+                },
+            );
+        }
+        content.signs = self
+            .signatures
+            .iter()
+            .map(|sign| (sign.address.clone(), sign.sign.clone()))
+            .collect();
+        let mut user_content_optional_null = false;
+
+        if let Some(meta) = &self.meta {
+            if let Some(pod) = &meta.pod {
+                content.address = pod.address.clone();
+                content.modified = number_from_datetime(pod.modified);
+                content.meta = Meta {
+                    inner_path: pod.inner_path.clone(),
+                    ..Default::default()
+                };
+                user_content_optional_null = pod.user_contents_optional_null;
+            }
+            if let Some(ignore) = &meta.ignore {
+                content.ignore = ignore.clone();
+            }
+        }
+        if let Some(user_contents) = &self.meta.as_ref().unwrap().user_contents {
+            let mut user_contents = user_contents.clone();
+            if user_content_optional_null {
+                user_contents
+                    .data
+                    .insert("optional".to_string(), Value::Null);
+            }
+
+            content.user_contents = Some(user_contents.clone());
+        }
+
+        content
+    }
+
+    pub fn save_content(path: impl AsRef<Path> + Clone, content: Content) -> Option<bool> {
+        fs::create_dir_all(&(path.clone())).unwrap();
+        let content = serde_json::to_string_pretty(&content).unwrap();
+        let path = path.as_ref().join("data/users/content.json");
+        let mut file = OpenOptions::new()
+            .write(true)
+            .create(true)
+            .open(path)
+            .unwrap();
+        //create file if not exists including parent directories
+        Some(file.write_all(content.as_bytes()).is_ok())
+    }
+}
 
 impl IO for PodInternalManifest {
     type Item = PodInternalManifest;
@@ -96,7 +167,7 @@ impl From<&Content> for PodInternalManifestMetaPod {
         Self {
             address: content.address.clone(),
             modified: datetime_from_number(content.modified.clone()),
-            inner_path: content.inner_path.clone(),
+            inner_path: content.meta.inner_path.clone(),
             ..Default::default()
         }
     }
@@ -104,6 +175,10 @@ impl From<&Content> for PodInternalManifestMetaPod {
 
 #[cfg(test)]
 mod tests {
+
+    use serde_bytes::ByteBuf;
+    use zerucontent::Content;
+
     use crate::{internal::PodInternalManifest, io::IO};
 
     const TEST_DATA_DIR_TALK: &str = "tests/data/zeronet/talk";
@@ -121,5 +196,17 @@ mod tests {
         let path = format!("{}/{}", TEST_DATA_DIR_TALK, "data/users/content.json");
         let root = PodInternalManifest::load_from_path(path).unwrap();
         root.save(TEST_TMP_DIR_TALK);
+    }
+
+    #[test]
+    fn test_pod_content_save_verify_talk() {
+        let path = format!("{}/{}", TEST_DATA_DIR_TALK, "data/users/content.json");
+        let root = PodInternalManifest::load_from_path(path).unwrap();
+        let content = root.to_content();
+        let bytes = ByteBuf::from(serde_json::to_vec(&content).unwrap());
+        let content = Content::from_buf(bytes).unwrap();
+        PodInternalManifest::save_content(TEST_TMP_DIR_TALK, content.clone());
+        let verify = content.verify(content.address.clone());
+        assert!(verify);
     }
 }
