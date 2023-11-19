@@ -251,7 +251,6 @@ mod tests {
         let content = root.to_content();
         let bytes = ByteBuf::from(serde_json::to_vec(&content).unwrap());
         let content = Content::from_buf(bytes).unwrap();
-        PodInternalManifest::save_content(TEST_TMP_DIR_ME, content.clone());
         let verify = content.verify("129AZxKKZFQAyrSxv8ocZtZzPU1Gy6Ua71".into());
         assert!(verify);
     }
