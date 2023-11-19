@@ -205,7 +205,6 @@ mod tests {
     const TEST_DATA_DIR_TALK: &str = "tests/data/zeronet/talk";
     const TEST_TMP_DIR_TALK: &str = "tests/tmp/data/zeronet/talk";
     const TEST_DATA_DIR_ME: &str = "tests/data/zeronet/me";
-    const TEST_TMP_DIR_ME: &str = "tests/tmp/data/zeronet/me";
 
     #[test]
     fn test_pod_manifest_from_content_data_talk() {
