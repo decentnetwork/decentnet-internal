@@ -18,8 +18,20 @@ impl From<&Content> for PodFileRoot {
     fn from(content: &Content) -> PodFileRoot {
         let mut root = PodFileRoot::default();
         let modified = datetime_from_number(content.modified.clone());
+
+        root.optional = (!content.optional.is_empty()).then_some(content.optional.clone());
+
         for (path, file) in &content.files {
             root.files.push(PodFile {
+                path: path.clone(),
+                hash: file.sha512.clone(),
+                size: file.size,
+                modified,
+            })
+        }
+
+        for (path, file) in &content.files_optional {
+            root.files_optional.push(PodFile {
                 path: path.clone(),
                 hash: file.sha512.clone(),
                 size: file.size,

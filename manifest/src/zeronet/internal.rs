@@ -37,7 +37,22 @@ impl PodInternalManifest {
                     map
                 },
             );
+            content.files_optional = files.file_root.files_optional.iter().fold(
+                std::collections::BTreeMap::new(),
+                |mut map, file| {
+                    map.insert(
+                        file.path.clone(),
+                        zerucontent::File {
+                            sha512: file.hash.clone(),
+                            size: file.size,
+                        },
+                    );
+                    map
+                },
+            );
+            content.optional = files.file_root.optional.clone().unwrap_or_default();
         }
+
         content.signs = self
             .signatures
             .iter()
@@ -183,6 +198,8 @@ mod tests {
 
     const TEST_DATA_DIR_TALK: &str = "tests/data/zeronet/talk";
     const TEST_TMP_DIR_TALK: &str = "tests/tmp/data/zeronet/talk";
+    const TEST_DATA_DIR_ME: &str = "tests/data/zeronet/me";
+    const TEST_TMP_DIR_ME: &str = "tests/tmp/data/zeronet/me";
 
     #[test]
     fn test_pod_manifest_from_content_data_talk() {
@@ -218,6 +235,18 @@ mod tests {
         let bytes = ByteBuf::from(serde_json::to_vec(&content).unwrap());
         let content = Content::from_buf(bytes).unwrap();
         let verify = content.verify("1AmeB7f5wBfJm6iR7MRZfFh65xkJzaVCX7".into());
+        assert!(verify);
+    }
+
+    #[test]
+    fn test_pod_content_user_verify_me() {
+        let path = format!("{}/{}", TEST_DATA_DIR_ME, "data/users/user1/content.json");
+        let root = PodInternalManifest::load_from_path(path).unwrap();
+        let content = root.to_content();
+        let bytes = ByteBuf::from(serde_json::to_vec(&content).unwrap());
+        let content = Content::from_buf(bytes).unwrap();
+        PodInternalManifest::save_content(TEST_TMP_DIR_ME, content.clone());
+        let verify = content.verify("129AZxKKZFQAyrSxv8ocZtZzPU1Gy6Ua71".into());
         assert!(verify);
     }
 }

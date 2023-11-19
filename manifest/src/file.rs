@@ -7,6 +7,8 @@ pub struct PodFileRoot {
     pub hash: String,
     /// Sign of this file content
     pub sign: String,
+    /// optional file pattern
+    pub optional: Option<String>,
     /// Files in this pod
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub files: Vec<PodFile>,
