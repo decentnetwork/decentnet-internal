@@ -1,5 +1,5 @@
 [workspace]
-members = ["manifest"]
+members = ["manifest", "compatibility"]
 resolver = "2"
 
 [workspace.package]
@@ -12,6 +12,7 @@ repository = "https://github.com/decentnet/decentnet"
 rust-version = "1.70"
 
 [workspace.dependencies]
+clap = { version = "*", features = ["derive"] }
 decentnet-manifest = { path = "manifest" }
 serde = "1.0.189"
 serde_json = "1"
