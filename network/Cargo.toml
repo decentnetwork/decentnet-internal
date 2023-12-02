@@ -1,0 +1,32 @@
+[package]
+name = "network"
+version = "0.1.0"
+authors.workspace = true
+edition.workspace = true
+homepage.workspace = true
+publish.workspace = true
+readme.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+async-trait = "0.1.52"
+either = "1.6.1"
+futures = "0.3.29"
+libp2p = { version = "*", features = ["full"] }
+log = "*"
+ping = "0.5.0"
+rkyv = "0.7.36"
+tokio = { version = "1.17.0", features = [
+    "io-util",
+    "io-std",
+    "macros",
+    "rt",
+    "rt-multi-thread",
+    "sync",
+    "fs",
+    "time",
+] }
+void = "1.0.2"
