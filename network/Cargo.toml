@@ -30,3 +30,7 @@ tokio = { version = "1.17.0", features = [
     "time",
 ] }
 void = "1.0.2"
+
+[features]
+default = ["additional-log"]
+additional-log = []

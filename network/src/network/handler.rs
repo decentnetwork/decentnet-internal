@@ -44,6 +44,7 @@ impl DecentNetworkBehaviour {
         network_config: &mut NetworkConfig,
     ) {
         match event {
+            #[cfg(feature = "additional-log")]
             SwarmEvent::Dialing {
                 peer_id: Some(peer_id),
                 ..
@@ -97,6 +98,7 @@ impl DecentNetworkBehaviour {
                     );
                     }
                 } else {
+                    #[cfg(feature = "additional-log")]
                     if network_config.debug_mode {
                         info!("Connected to {}", network_id);
                     }
@@ -176,6 +178,7 @@ impl DecentNetworkBehaviour {
                     }
                 }
             }
+            #[cfg(feature = "additional-log")]
             SwarmEvent::IncomingConnection {
                 local_addr,
                 send_back_addr,
@@ -188,6 +191,7 @@ impl DecentNetworkBehaviour {
                     );
                 }
             }
+            #[cfg(feature = "additional-log")]
             SwarmEvent::IncomingConnectionError {
                 local_addr,
                 send_back_addr,
@@ -199,6 +203,7 @@ impl DecentNetworkBehaviour {
                 send_back_addr, local_addr, error
             );
             }
+            #[cfg(feature = "additional-log")]
             SwarmEvent::ExpiredListenAddr {
                 listener_id,
                 address,
@@ -208,6 +213,7 @@ impl DecentNetworkBehaviour {
                     listener_id, address
                 );
             }
+            #[cfg(feature = "additional-log")]
             SwarmEvent::ListenerClosed {
                 listener_id,
                 addresses,
@@ -218,6 +224,7 @@ impl DecentNetworkBehaviour {
                     listener_id, addresses, reason
                 );
             }
+            #[cfg(feature = "additional-log")]
             SwarmEvent::ListenerError { listener_id, error } => {
                 error!(
                     "Listener Closed : listener_id : {:?}, error: {}",
