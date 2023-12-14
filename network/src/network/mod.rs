@@ -20,6 +20,7 @@ use rkyv::{Archive, Deserialize, Serialize};
 use self::protocol::{DecentNetRequest, DecentNetResponse};
 
 pub mod behaviour;
+pub mod error;
 pub mod config;
 pub mod handler;
 pub mod identity;

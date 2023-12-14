@@ -12,7 +12,7 @@ use rkyv::{
     Archive, Deserialize, Infallible, Serialize,
 };
 
-use super::NetworkNode;
+use super::{NetworkNode, error::Error};
 
 #[derive(Clone, Debug, Archive, Deserialize, Serialize)]
 pub struct NetworkNodeRecord {
@@ -43,19 +43,29 @@ pub enum DecentNetRequest {
     SendNodeRecord(NetworkNodeRecord),
 }
 
-impl From<Vec<u8>> for DecentNetRequest {
-    fn from(bytes: Vec<u8>) -> Self {
+impl TryFrom<Vec<u8>> for DecentNetRequest {
+    type Error = Error;
+
+    fn try_from(bytes: Vec<u8>) -> Result<Self, Self::Error> {
         let archived = unsafe { archived_root::<DecentNetRequest>(&bytes[..]) };
         let req = archived.deserialize(&mut Infallible);
-        req.expect("Deserilization Failed")
+        req.map_err(|_| Error::RequestDeserializationFailed)
     }
 }
 
-impl From<DecentNetRequest> for Vec<u8> {
-    fn from(request: DecentNetRequest) -> Self {
+impl TryFrom<DecentNetRequest> for Vec<u8> {
+    type Error = Error;
+
+    fn try_from(value: DecentNetRequest) -> Result<Self, Self::Error> {
         let mut serializer = AllocSerializer::<256>::default();
-        serializer.serialize_value(&request).unwrap();
-        serializer.into_serializer().into_inner().to_vec()
+        match serializer.serialize_value(&value) {
+            Ok(_) => {
+                Ok(serializer.into_serializer().into_inner().to_vec())
+            }
+            Err(_e) => {
+                Err(Error::RequestSerializationFailed)
+            }
+        }
     }
 }
 
@@ -66,19 +76,29 @@ pub enum DecentNetResponse {
     GotNetworkRecord,
 }
 
-impl From<Vec<u8>> for DecentNetResponse {
-    fn from(bytes: Vec<u8>) -> Self {
+impl TryFrom<Vec<u8>> for DecentNetResponse {
+    type Error = Error;
+
+    fn try_from(bytes: Vec<u8>) -> Result<Self, Self::Error> {
         let archived = unsafe { archived_root::<DecentNetResponse>(&bytes[..]) };
         let res = archived.deserialize(&mut Infallible);
-        res.expect("deserialization failed")
+        res.map_err(|_| Error::ResponseDeserializationFailed)
     }
 }
 
-impl From<DecentNetResponse> for Vec<u8> {
-    fn from(res: DecentNetResponse) -> Self {
+impl TryFrom<DecentNetResponse> for Vec<u8> {
+    type Error = Error;
+
+    fn try_from(res: DecentNetResponse) -> Result<Self, Self::Error> {
         let mut serializer = AllocSerializer::<256>::default();
-        serializer.serialize_value(&res).unwrap();
-        serializer.into_serializer().into_inner().to_vec()
+        match serializer.serialize_value(&res) {
+            Ok(_) => {
+                Ok(serializer.into_serializer().into_inner().to_vec())
+            }
+            Err(_e) => {
+                Err(Error::ResponseSerializationFailed)
+            }
+        }
     }
 }
 
@@ -99,7 +119,7 @@ impl RequestResponseCodec for DecentNetProtocol {
                 return Err(io::Error::new(io::ErrorKind::Other, e));
             }
         }
-        Ok(DecentNetRequest::from(buf))
+        DecentNetRequest::try_from(buf).map_err(|err| err.into() )
     }
 
     async fn read_response<T>(
@@ -117,7 +137,7 @@ impl RequestResponseCodec for DecentNetProtocol {
                 return Err(io::Error::new(io::ErrorKind::Other, e));
             }
         }
-        Ok(DecentNetResponse::from(buf))
+        DecentNetResponse::try_from(buf).map_err(|err| err.into() )
     }
 
     async fn write_request<T>(
@@ -129,8 +149,12 @@ impl RequestResponseCodec for DecentNetProtocol {
     where
         T: AsyncWrite + Unpin + Send,
     {
-        let bytes = Vec::from(req);
-        io.write_all(&bytes).await
+        let buf = Vec::try_from(req);
+        if let Err(e) = buf {
+            return Err(e.into());
+        } else {
+            io.write_all(&buf.unwrap()).await
+        }
     }
 
     async fn write_response<T>(
@@ -142,7 +166,11 @@ impl RequestResponseCodec for DecentNetProtocol {
     where
         T: AsyncWrite + Unpin + Send,
     {
-        let buf = Vec::from(res);
-        io.write_all(&buf).await
+        let buf = Vec::try_from(res);
+        if let Err(e) = buf {
+            return Err(e.into());
+        } else {
+            io.write_all(&buf.unwrap()).await
+        }
     }
 }
