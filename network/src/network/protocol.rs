@@ -12,7 +12,7 @@ use rkyv::{
     Archive, Deserialize, Infallible, Serialize,
 };
 
-use super::{NetworkNode, error::Error};
+use super::{error::Error, NetworkNode};
 
 #[derive(Clone, Debug, Archive, Deserialize, Serialize)]
 pub struct NetworkNodeRecord {
@@ -59,12 +59,8 @@ impl TryFrom<DecentNetRequest> for Vec<u8> {
     fn try_from(value: DecentNetRequest) -> Result<Self, Self::Error> {
         let mut serializer = AllocSerializer::<256>::default();
         match serializer.serialize_value(&value) {
-            Ok(_) => {
-                Ok(serializer.into_serializer().into_inner().to_vec())
-            }
-            Err(_e) => {
-                Err(Error::RequestSerializationFailed)
-            }
+            Ok(_) => Ok(serializer.into_serializer().into_inner().to_vec()),
+            Err(_e) => Err(Error::RequestSerializationFailed),
         }
     }
 }
@@ -92,12 +88,8 @@ impl TryFrom<DecentNetResponse> for Vec<u8> {
     fn try_from(res: DecentNetResponse) -> Result<Self, Self::Error> {
         let mut serializer = AllocSerializer::<256>::default();
         match serializer.serialize_value(&res) {
-            Ok(_) => {
-                Ok(serializer.into_serializer().into_inner().to_vec())
-            }
-            Err(_e) => {
-                Err(Error::ResponseSerializationFailed)
-            }
+            Ok(_) => Ok(serializer.into_serializer().into_inner().to_vec()),
+            Err(_e) => Err(Error::ResponseSerializationFailed),
         }
     }
 }
@@ -119,7 +111,7 @@ impl RequestResponseCodec for DecentNetProtocol {
                 return Err(io::Error::new(io::ErrorKind::Other, e));
             }
         }
-        DecentNetRequest::try_from(buf).map_err(|err| err.into() )
+        DecentNetRequest::try_from(buf).map_err(|err| err.into())
     }
 
     async fn read_response<T>(
@@ -137,7 +129,7 @@ impl RequestResponseCodec for DecentNetProtocol {
                 return Err(io::Error::new(io::ErrorKind::Other, e));
             }
         }
-        DecentNetResponse::try_from(buf).map_err(|err| err.into() )
+        DecentNetResponse::try_from(buf).map_err(|err| err.into())
     }
 
     async fn write_request<T>(
