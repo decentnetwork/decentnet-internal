@@ -47,14 +47,7 @@ impl From<Vec<u8>> for DecentNetRequest {
     fn from(bytes: Vec<u8>) -> Self {
         let archived = unsafe { archived_root::<DecentNetRequest>(&bytes[..]) };
         let req = archived.deserialize(&mut Infallible);
-        // let req =
         req.expect("Deserilization Failed")
-        // match req {
-        //     DecentNetRequest::Ping => DecentNetRequest::Ping,
-        //     DecentNetRequest::GetNetworkNodes => DecentNetRequest::GetNetworkNodes,
-        //     DecentNetRequest::SendNodeRecord(record) => DecentNetRequest::SendNodeRecord(record),
-        // }
-        // req
     }
 }
 
@@ -78,12 +71,6 @@ impl From<Vec<u8>> for DecentNetResponse {
         let archived = unsafe { archived_root::<DecentNetResponse>(&bytes[..]) };
         let res = archived.deserialize(&mut Infallible);
         res.expect("deserialization failed")
-        // match res {
-        //     DecentNetResponse::Pong => DecentNetResponse::Pong,
-        //     DecentNetResponse::Record(NetworkNodeRecord { nodes }) => {
-        //         DecentNetResponse::Record(NetworkNodeRecord { nodes })
-        //     }
-        // }
     }
 }
 
@@ -105,12 +92,6 @@ impl RequestResponseCodec for DecentNetProtocol {
     where
         T: AsyncRead + Unpin + Send,
     {
-        // io.take(2048)
-        //     .map(|request| match request {
-        //         Ok(bytes) => Ok(DecentNetRequest::from(bytes)),
-        //         Err(e) => Err(io::Error::new(io::ErrorKind::Other, e)),
-        //     })
-        //     .await
         let mut buf = Vec::new();
         match io.take(2048).read_to_end(&mut buf).await {
             Ok(_) => {}
@@ -129,13 +110,6 @@ impl RequestResponseCodec for DecentNetProtocol {
     where
         T: AsyncRead + Unpin + Send,
     {
-        //TODO? : Check for max_size bugs here.
-        // io.take(2048)
-        //     .map(|response| match response {
-        //         Ok(bytes) => Ok(DecentNetResponse::from(bytes)),
-        //         Err(e) => Err(io::Error::new(io::ErrorKind::Other, e)),
-        //     })
-        //     .await
         let mut buf = Vec::new();
         match io.take(2048).read_to_end(&mut buf).await {
             Ok(_) => {}

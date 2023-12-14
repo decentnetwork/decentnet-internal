@@ -111,13 +111,9 @@ impl Network {
                 Toggle::from(None)
             },
             protocol: {
-                // let secs = if config.live_connection { 60 * 10 } else { 10 };
-                // let duration = Duration::from_secs(secs);
                 let cfg = RequestResponseConfig::default()
-                    // .set_connection_keep_alive(duration) //TODO! enable this
                     .with_request_timeout(Duration::from_secs(30))
                     .to_owned();
-                // let protocols = iter::once((DecentNetProtocol(), ProtocolSupport::Full));
                 RequestResponse::<DecentNetProtocol>::new(DecentNetProtocol(), cfg)
             },
             rendezvous: self.rendezvous_behaviour(config.server_mode),

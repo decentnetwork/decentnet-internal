@@ -35,38 +35,7 @@ use crate::network::{
     NetworkEvent, NetworkNode,
 };
 
-// pub type OutEvent = <<<DecentNetworkBehaviour as NetworkBehaviour>::ProtocolsHandler as IntoProtocolsHandler>::Handler as ProtocolsHandler>::OutEvent;
-// pub type InEvent = <<<DecentNetworkBehaviour as NetworkBehaviour>::ProtocolsHandler as IntoProtocolsHandler>::Handler as ProtocolsHandler>::InEvent;
-// pub type Handler = <DecentNetworkBehaviour as NetworkBehaviour>::ProtocolsHandler;
-// pub type NetworkSwarmEvent = SwarmEvent<OutEvent, Handler>;
-// pub type NetworkSwarmEventD = SwarmEvent<NetworkEvent, Handler>;
 pub type NetworkSwarmEvent = SwarmEvent<NetworkEvent>;
-//     Either<
-//         Either<
-//             Either<
-//                 Either<
-//                     Either<
-//                         Either<
-//                             Either<Either<PingFailure, ConnectionHandlerUpgrErr<Error>>, Error>,
-//                             Void,
-//                         >,
-//                         Error,
-//                     >,
-//                     ConnectionHandlerUpgrErr<Error>,
-//                 >,
-//                 Either<
-//                     ConnectionHandlerUpgrErr<Either<InHopUpgradeError, OutStopUpgradeError>>,
-//                     Void,
-//                 >,
-//             >,
-//             Either<ConnectionHandlerUpgrErr<Either<InStopUpgradeError, OutHopUpgradeError>>, Void>,
-//         >,
-//         Either<
-//             ConnectionHandlerUpgrErr<Either<InboundUpgradeError, OutboundUpgradeError>>,
-//             Either<ConnectionHandlerUpgrErr<Error>, Void>,
-//         >,
-//     >,
-// >;
 
 impl DecentNetworkBehaviour {
     pub fn handle_swarm_event(

@@ -82,8 +82,6 @@ pub enum NetworkEvent {
     DCUtR(DCUtREvent),
     RequestResponse(RequestResponseEvent<DecentNetRequest, DecentNetResponse>),
     RendezvousEvent(Either<RendezvousClientEvent, RendezvousServerEvent>),
-    // RendezvousServer(RendezvousServerEvent),
-    // RendezvousClient(RendezvousClientEvent),
 }
 
 impl From<PingEvent> for NetworkEvent {
@@ -160,15 +158,3 @@ impl From<Either<RendezvousClientEvent, RendezvousServerEvent>> for NetworkEvent
         NetworkEvent::RendezvousEvent(event)
     }
 }
-
-// impl From<RendezvousServerEvent> for NetworkEvent {
-//     fn from(event: RendezvousServerEvent) -> Self {
-//         NetworkEvent::RendezvousServer(event)
-//     }
-// }
-
-// impl From<RendezvousClientEvent> for NetworkEvent {
-//     fn from(event: RendezvousClientEvent) -> Self {
-//         NetworkEvent::RendezvousClient(event)
-//     }
-// }

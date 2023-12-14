@@ -56,7 +56,6 @@ impl<'a> IdentityImpl<'a> for Network {
     fn gen_random_id_with_private() -> (ed25519::SecretKey, Self) {
         let private_key = ed25519::SecretKey::generate();
         let keypair = ed25519::Keypair::from(private_key.clone());
-        // let keypair = identity::Keypair::Ed25519(keypair);
         let keypair = identity::Keypair::from(keypair);
         let keypair = Keypair(keypair);
         (
@@ -71,7 +70,6 @@ impl<'a> IdentityImpl<'a> for Network {
     fn from_bytes(bytes: impl AsMut<[u8]>) -> Self {
         let private_key = ed25519::SecretKey::try_from_bytes(bytes).unwrap();
         let keypair = ed25519::Keypair::from(private_key);
-        // let keypair = identity::Keypair::Ed25519(keypair);
         let keypair = identity::Keypair::from(keypair);
         let keypair = Keypair(keypair);
         Self {
