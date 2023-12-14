@@ -9,6 +9,7 @@ use libp2p::{
     multiaddr::Protocol,
     noise::Config as NoiseConfig,
     ping::{Behaviour as Ping, Config as PingConfig},
+    relay::{client::Behaviour as RelayClient, Behaviour as RelayServer, Config as RelayConfig},
     rendezvous::{
         client::Behaviour as RendezvousClientBehaviour,
         server::Behaviour as RendezvousServerBehaviour,
@@ -44,7 +45,7 @@ pub struct DecentNetworkBehaviour {
     pub mdns: Toggle<Mdns>,
     pub identify: Identify,
     pub protocol: RequestResponse<DecentNetProtocol>,
-    // pub relay: Toggle<RelayServer>,
+    pub relay: Either<RelayServer, RelayClient>,
     pub dcutr: Toggle<DCUtR>,
     pub rendezvous: Either<RendezvousClientBehaviour, RendezvousServerBehaviour>,
     // pub requests: HashSet<(OutboundRequestId, NetworkId, bool)>,
@@ -57,7 +58,11 @@ impl AsMut<DecentNetworkBehaviour> for DecentNetworkBehaviour {
 }
 
 impl Network {
-    pub fn build_behaviour(&self, config: NetworkConfig) -> DecentNetworkBehaviour {
+    pub fn build_behaviour(
+        &self,
+        config: &NetworkConfig,
+        relay: Option<RelayClient>,
+    ) -> DecentNetworkBehaviour {
         let mdns = if !config.server_mode && config.local_discovery {
             let mdns = Mdns::new(Default::default(), self.id());
             let mdns = if let Ok(mdns) = mdns {
@@ -81,22 +86,22 @@ impl Network {
                 IDENTIFY_PROTOCOL_VERSION.to_string(),
                 self.public_key(),
             )),
-            // relay: {
-            //     if config.server_mode {
-            //         let config = RelayConfig {
-            //             max_reservations: 1024,
-            //             max_circuits: 1024,
-            //             max_circuits_per_peer: 8,
-            //             max_circuit_duration: Duration::from_secs(30 * 60),
-            //             max_circuit_bytes: (1 << 17) * 8,
-            //             ..Default::default()
-            //         };
-            //         Toggle::from(RelayServer::new(self.id(), config))
-            //     } else {
-            //         // let client = relay::client::Behaviour::new(self.id());
-            //         Toggle::from(None)
-            //     }
-            // },
+            relay: {
+                if config.server_mode {
+                    //TODO: Make this configurable from config file
+                    let config = RelayConfig {
+                        max_reservations: 1024,
+                        max_circuits: 1024,
+                        max_circuits_per_peer: 8,
+                        max_circuit_duration: Duration::from_secs(30 * 60),
+                        max_circuit_bytes: (1 << 17) * 8 * 10,
+                        ..Default::default()
+                    };
+                    Either::Left(RelayServer::new(self.id(), config))
+                } else {
+                    Either::Right(relay.unwrap())
+                }
+            },
             dcutr: if !config.server_mode {
                 Toggle::from(Some(DCUtR::new(self.id())))
             } else {
@@ -114,22 +119,37 @@ impl Network {
         }
     }
 
-    pub fn build_swarm<TBehaviour: NetworkBehaviour>(
-        self,
-        behaviour: TBehaviour,
-    ) -> Swarm<TBehaviour> {
-        SwarmBuilder::with_existing_identity(self.keypair())
+    pub fn build_swarm(self, config: &NetworkConfig) -> Swarm<DecentNetworkBehaviour> {
+        let keypair = self.clone().keypair();
+        let builder = SwarmBuilder::with_existing_identity(keypair)
             .with_tokio()
             .with_tcp(
                 tcp::Config::default().port_reuse(true).nodelay(true),
                 NoiseConfig::new,
                 YamuxConfig::default,
             )
-            .unwrap()
-            .with_behaviour(|_| behaviour)
-            .unwrap()
-            .with_swarm_config(|scfg| scfg.with_dial_concurrency_factor(10_u8.try_into().unwrap()))
-            .build()
+            .unwrap();
+        if config.server_mode {
+            builder
+                .with_relay_client(NoiseConfig::new, YamuxConfig::default)
+                .unwrap()
+                .with_behaviour(|_, relay_behaviour| {
+                    self.build_behaviour(config, Some(relay_behaviour))
+                })
+                .unwrap()
+                .with_swarm_config(|scfg| {
+                    scfg.with_dial_concurrency_factor(10_u8.try_into().unwrap())
+                })
+                .build()
+        } else {
+            builder
+                .with_behaviour(|_| self.build_behaviour(config, None))
+                .unwrap()
+                .with_swarm_config(|scfg| {
+                    scfg.with_dial_concurrency_factor(10_u8.try_into().unwrap())
+                })
+                .build()
+        }
     }
 
     pub fn start_listening<TBehaviour: NetworkBehaviour>(

@@ -7,6 +7,7 @@ use libp2p::{
     kad::Event as KademliaEvent,
     mdns::Event as MdnsEvent,
     ping::Event as PingEvent,
+    relay::client::Event as RelayClientEvent,
     relay::Event as RelayServerEvent,
     rendezvous::{
         client::{Behaviour as RendezvousClientBehaviour, Event as RendezvousClientEvent},
@@ -78,8 +79,7 @@ pub enum NetworkEvent {
     Kademlia(KademliaEvent),
     Mdns(MdnsEvent),
     Identify(IdentifyEvent),
-    // RelayEvent(Either<RelayClientEvent, RelayServerEvent>),
-    RelayEvent(RelayServerEvent),
+    RelayEvent(Either<RelayServerEvent, RelayClientEvent>),
     DCUtR(DCUtREvent),
     RequestResponse(RequestResponseEvent<DecentNetRequest, DecentNetResponse>),
     RendezvousEvent(Either<RendezvousClientEvent, RendezvousServerEvent>),
@@ -109,27 +109,9 @@ impl From<MdnsEvent> for NetworkEvent {
     }
 }
 
-// impl From<RelayServerEvent> for NetworkEvent {
-//     fn from(event: RelayServerEvent) -> Self {
-//         NetworkEvent::RelayServer(event)
-//     }
-// }
-
-// impl From<RelayClientEvent> for NetworkEvent {
-//     fn from(event: RelayClientEvent) -> Self {
-//         NetworkEvent::RelayClient(event)
-//     }
-// }
-
 impl From<DCUtREvent> for NetworkEvent {
     fn from(event: DCUtREvent) -> Self {
         NetworkEvent::DCUtR(event)
-    }
-}
-
-impl From<RelayServerEvent> for NetworkEvent {
-    fn from(event: RelayServerEvent) -> Self {
-        NetworkEvent::RelayEvent(event)
     }
 }
 
@@ -144,15 +126,14 @@ impl From<IdentifyEvent> for NetworkEvent {
         NetworkEvent::Identify(event)
     }
 }
-
-// impl From<Either<RelayClientEvent, RelayServerEvent>> for NetworkEvent {
-//     fn from(event: Either<RelayClientEvent, RelayServerEvent>) -> Self {
-//         match event {
-//             Either::Left(event) => NetworkEvent::RelayEvent(Either::Left(event)),
-//             Either::Right(event) => NetworkEvent::RelayEvent(Either::Right(event)),
-//         }
-//     }
-// }
+impl From<Either<RelayServerEvent, RelayClientEvent>> for NetworkEvent {
+    fn from(event: Either<RelayServerEvent, RelayClientEvent>) -> Self {
+        match event {
+            Either::Left(event) => NetworkEvent::RelayEvent(Either::Left(event)),
+            Either::Right(event) => NetworkEvent::RelayEvent(Either::Right(event)),
+        }
+    }
+}
 
 impl From<Either<RendezvousClientEvent, RendezvousServerEvent>> for NetworkEvent {
     fn from(event: Either<RendezvousClientEvent, RendezvousServerEvent>) -> Self {

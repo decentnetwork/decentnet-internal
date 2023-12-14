@@ -104,9 +104,7 @@ pub async fn build_development_swarm2() -> Swarm<DecentNetworkBehaviour> {
 
 pub async fn build_development_swarm(config: &NetworkConfig) -> Swarm<DecentNetworkBehaviour> {
     let (_, network) = Network::gen_random_id_with_private();
-    // let (client, transport) = network.build_transport(config.server_mode);
-    let behaviour = network.build_behaviour(config.clone());
-    network.build_swarm(behaviour)
+    network.build_swarm(config)
 }
 
 pub fn development_net_conf(port: u16, dial_mode: bool) -> NetworkConfig {
@@ -130,7 +128,5 @@ pub fn development_net_conf(port: u16, dial_mode: bool) -> NetworkConfig {
 pub fn build_development_swarm_sync() -> Swarm<DecentNetworkBehaviour> {
     let config = development_net_conf(26117, true);
     let (_, network) = Network::gen_random_id_with_private();
-    // let (client, transport) = network.build_transport(config.server_mode);
-    let behaviour = network.build_behaviour(config);
-    network.build_swarm(behaviour)
+    network.build_swarm(&config)
 }

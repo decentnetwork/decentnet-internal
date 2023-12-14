@@ -893,9 +893,10 @@ impl DecentNetworkBehaviour {
             NetworkEvent::RequestResponse(event) => {
                 Self::handle_req_res_event(event, swarm, network_config)
             }
-            // NetworkEvent::RelayServer(event) => Self::handle_relay_server_event(event),
-            // NetworkEvent::RelayClient(event) => Self::handle_relay_client_event(event),
-            NetworkEvent::RelayEvent(event) => Self::handle_relay_server_event(event),
+            NetworkEvent::RelayEvent(event) => match event {
+                Either::Left(event) => Self::handle_relay_server_event(event),
+                Either::Right(event) => Self::handle_relay_client_event(event),
+            },
             NetworkEvent::DCUtR(event) => Self::handle_dcutr_event(event),
         }
     }
