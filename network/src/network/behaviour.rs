@@ -57,7 +57,7 @@ impl AsMut<DecentNetworkBehaviour> for DecentNetworkBehaviour {
 }
 
 impl Network {
-    pub async fn build_behaviour(&self, config: NetworkConfig) -> DecentNetworkBehaviour {
+    pub fn build_behaviour(&self, config: NetworkConfig) -> DecentNetworkBehaviour {
         let mdns = if !config.server_mode && config.local_discovery {
             let mdns = Mdns::new(Default::default(), self.id());
             let mdns = if let Ok(mdns) = mdns {
@@ -69,14 +69,6 @@ impl Network {
         } else {
             Toggle::from(None)
         };
-        self.build_behaviour_sync(config, mdns)
-    }
-
-    pub fn build_behaviour_sync(
-        &self,
-        config: NetworkConfig,
-        mdns: Toggle<Mdns>,
-    ) -> DecentNetworkBehaviour {
         DecentNetworkBehaviour {
             ping: Ping::new(PingConfig::new()),
             floodsub: Floodsub::new(self.id()),

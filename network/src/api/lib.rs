@@ -33,7 +33,7 @@ pub fn initialise_with_network(
     network: Network,
 ) -> Result<Swarm<DecentNetworkBehaviour>, &'static str> {
     // let (client, transport) = network.build_transport(network_config.server_mode);
-    let behaviour = network.build_behaviour_sync(network_config.clone(), Toggle::from(None));
+    let behaviour = network.build_behaviour(network_config.clone());
     let swarm = network.build_swarm(behaviour);
     Ok(swarm)
 }
