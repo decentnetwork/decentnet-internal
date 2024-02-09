@@ -58,7 +58,7 @@ impl AsMut<DecentNetworkBehaviour> for DecentNetworkBehaviour {
 }
 
 impl Network {
-    pub fn build_behaviour(
+    fn build_behaviour(
         &self,
         config: &NetworkConfig,
         relay: Option<RelayClient>,
@@ -119,7 +119,7 @@ impl Network {
         }
     }
 
-    pub fn build_swarm(self, config: &NetworkConfig) -> Swarm<DecentNetworkBehaviour> {
+    pub fn build_swarm(&self, config: &NetworkConfig) -> Swarm<DecentNetworkBehaviour> {
         let keypair = self.clone().keypair();
         let builder = SwarmBuilder::with_existing_identity(keypair)
             .with_tokio()
