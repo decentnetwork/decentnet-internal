@@ -105,22 +105,39 @@ pub fn listeners(swarm: &mut Swarm<DecentNetworkBehaviour>) -> Vec<String> {
         .collect()
 }
 
+/// format for file content
+/// NETWORK_ID MULTIADDR<::>MULTIADDR
+/// <::> is the separator between multiaddrs
+/// First multiaddr is for ipv4 and second multiaddr is for ipv6
+/// You can omit the second multiaddr if you don't have it
 pub fn load_bootnodes(file_path: &str) -> Vec<BootNode> {
     let file = std::fs::read_to_string(file_path);
     if let Ok(file) = file {
         file.lines()
-            .map(|line| {
+            .filter_map(|line| {
                 let mut parts = line.split(' ');
                 let network_id = NetworkId::from_str(parts.next().unwrap()).unwrap();
-                let address = parts.next().unwrap().split("::").collect::<Vec<_>>();
-                let ip_v4 = address[0].to_owned();
-                let ip_v6 = address[1].to_owned();
-                let addr = if ipv6_supported() { ip_v6 } else { ip_v4 };
-                let multiaddr = Multiaddr::from_str(&addr).unwrap();
-                BootNode {
+                let address = parts
+                    .next()
+                    .unwrap()
+                    .split("<::>")
+                    .filter(|x| !x.is_empty())
+                    .collect::<Vec<_>>();
+                if address.is_empty() {
+                    return None;
+                }
+                let multiaddr = if ipv6_supported() {
+                    let ip_v6 = address.iter().filter(|x| !x.starts_with("/ip6")).collect::<Vec<_>>();
+                    let ip_v6 = ip_v6.get(1).get_or_insert(&&address[0]).to_string();
+                    ip_v6.parse().unwrap()
+                } else {
+                    let ip_v4 = address.get(0).unwrap().to_string();
+                    ip_v4.parse().unwrap()
+                };
+                Some(BootNode {
                     network_id,
                     multiaddr,
-                }
+                })
             })
             .collect()
     } else {
