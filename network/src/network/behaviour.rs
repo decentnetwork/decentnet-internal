@@ -153,7 +153,7 @@ impl Network {
                 YamuxConfig::default,
             )
             .unwrap();
-        if config.server_mode {
+        if !config.server_mode {
             builder
                 .with_relay_client(NoiseConfig::new, YamuxConfig::default)
                 .unwrap()
