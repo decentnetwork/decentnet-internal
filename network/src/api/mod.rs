@@ -1,6 +1,9 @@
 use crate::network::{
-    behaviour::DecentNetworkBehaviour, config::NetworkConfig, identity::Network,
-    protocol::DecentNetRequest, BootNode, IdentityImpl, NetworkNode,
+    behaviour::DecentNetworkBehaviour,
+    config::NetworkConfig,
+    identity::Network,
+    protocol::{DecentNetRequest, NetworkNode},
+    BootNode, IdentityImpl,
 };
 use libp2p::{Multiaddr, PeerId, Swarm};
 use log::info;

@@ -1,4 +1,8 @@
 use either::Either;
+#[cfg(not(feature = "rkyv"))]
+use libp2p::request_response::json::Behaviour as RequestResponse;
+#[cfg(feature = "rkyv")]
+use libp2p::request_response::Behaviour as RequestResponse;
 use libp2p::{
     core::transport::ListenerId,
     dcutr::Behaviour as DCUtR,
@@ -14,7 +18,7 @@ use libp2p::{
         client::Behaviour as RendezvousClientBehaviour,
         server::Behaviour as RendezvousServerBehaviour,
     },
-    request_response::{Behaviour as RequestResponse, Config as RequestResponseConfig},
+    request_response::Config as RequestResponseConfig,
     swarm::{behaviour::toggle::Toggle, NetworkBehaviour},
     tcp,
     yamux::Config as YamuxConfig,
@@ -34,7 +38,10 @@ use crate::network::{
     IdentityImpl, NetworkEvent, NetworkId,
 };
 
+#[cfg(feature = "rkyv")]
 use super::protocol::DecentNetProtocol;
+#[cfg(not(feature = "rkyv"))]
+use super::protocol::{DecentNetRequest, DecentNetResponse};
 
 #[derive(NetworkBehaviour)]
 #[behaviour(out_event = "NetworkEvent")]
@@ -44,7 +51,10 @@ pub struct DecentNetworkBehaviour {
     pub kademlia: Kademlia<MemoryStore>,
     pub mdns: Toggle<Mdns>,
     pub identify: Identify,
+    #[cfg(feature = "rkyv")]
     pub protocol: RequestResponse<DecentNetProtocol>,
+    #[cfg(not(feature = "rkyv"))]
+    pub protocol: RequestResponse<DecentNetRequest, DecentNetResponse>,
     pub relay: Either<RelayServer, RelayClient>,
     pub dcutr: Toggle<DCUtR>,
     pub rendezvous: Either<RendezvousClientBehaviour, RendezvousServerBehaviour>,
@@ -108,10 +118,24 @@ impl Network {
                 Toggle::from(None)
             },
             protocol: {
-                let cfg = RequestResponseConfig::default()
-                    .with_request_timeout(Duration::from_secs(30))
-                    .to_owned();
-                RequestResponse::<DecentNetProtocol>::new(DecentNetProtocol(), cfg)
+                #[cfg(feature = "rkyv")]
+                {
+                    let cfg = RequestResponseConfig::default()
+                        .with_request_timeout(Duration::from_secs(30))
+                        .to_owned();
+                    RequestResponse::<DecentNetProtocol>::new(DecentNetProtocol(), cfg)
+                }
+                #[cfg(not(feature = "rkyv"))]
+                {
+                    let cfg = RequestResponseConfig::default()
+                        .with_request_timeout(Duration::from_secs(30))
+                        .to_owned();
+                    let proto = [(
+                        libp2p::StreamProtocol::new("/decentnet/0.0.1"),
+                        libp2p::request_response::ProtocolSupport::Full,
+                    )];
+                    RequestResponse::<DecentNetRequest, DecentNetResponse>::new(proto, cfg)
+                }
             },
             rendezvous: self.rendezvous_behaviour(config.server_mode),
             // config,

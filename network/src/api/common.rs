@@ -1,6 +1,6 @@
 use crate::network::{
-    behaviour::DecentNetworkBehaviour, config::NetworkConfig, identity::Network, IdentityImpl,
-    NetworkNode,
+    behaviour::DecentNetworkBehaviour, config::NetworkConfig, identity::Network,
+    protocol::NetworkNode, IdentityImpl,
 };
 
 use libp2p::{

@@ -16,7 +16,6 @@ use libp2p::{
     request_response::Event as RequestResponseEvent,
     Multiaddr, PeerId,
 };
-use rkyv::{Archive, Deserialize, Serialize};
 
 use self::protocol::{DecentNetRequest, DecentNetResponse};
 
@@ -54,17 +53,11 @@ pub struct BootNode {
     pub multiaddr: Multiaddr,
 }
 
-#[derive(Clone, Debug, Archive, Deserialize, Serialize)]
+#[derive(Clone, Debug)]
 pub enum ClientRelayMode {
     Disabled,
     Listener,
     Dialer,
-}
-
-#[derive(Clone, Debug, Archive, Deserialize, Serialize)]
-pub struct NetworkNode {
-    pub network_id: String,
-    pub multiaddr: Vec<String>,
 }
 
 pub enum RendezvousBehaviour {

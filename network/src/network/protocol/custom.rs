@@ -12,7 +12,13 @@ use rkyv::{
     Archive, Deserialize, Infallible, Serialize,
 };
 
-use super::{error::Error, NetworkNode};
+use crate::network::error::Error;
+
+#[derive(Clone, Debug, Archive, Deserialize, Serialize)]
+pub struct NetworkNode {
+    pub network_id: String,
+    pub multiaddr: Vec<String>,
+}
 
 #[derive(Clone, Debug, Archive, Deserialize, Serialize)]
 pub struct NetworkNodeRecord {

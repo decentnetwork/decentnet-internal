@@ -30,9 +30,9 @@ use crate::network::{
     behaviour::DecentNetworkBehaviour,
     config::NetworkConfig,
     config::RENDEZVOUS_NAMESPACE,
-    protocol::{DecentNetRequest, DecentNetResponse, NetworkNodeRecord},
+    protocol::{DecentNetRequest, DecentNetResponse, NetworkNode, NetworkNodeRecord},
     utils::get_external_addrs,
-    NetworkEvent, NetworkNode,
+    NetworkEvent,
 };
 
 pub type NetworkSwarmEvent = SwarmEvent<NetworkEvent>;
