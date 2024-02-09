@@ -3,9 +3,7 @@ use std::{
     str::FromStr,
 };
 
-use libp2p::{
-    identity::ed25519::SecretKey, swarm::behaviour::toggle::Toggle, Multiaddr, PeerId, Swarm,
-};
+use libp2p::{identity::ed25519::SecretKey, Multiaddr, PeerId, Swarm};
 
 use crate::network::{
     behaviour::DecentNetworkBehaviour, config::NetworkConfig, identity::Network, BootNode,

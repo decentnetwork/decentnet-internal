@@ -2,7 +2,7 @@ use crate::network::{
     behaviour::DecentNetworkBehaviour, config::NetworkConfig, identity::Network,
     protocol::DecentNetRequest, BootNode, IdentityImpl, NetworkNode,
 };
-use libp2p::{swarm::behaviour::toggle::Toggle, Multiaddr, PeerId, Swarm};
+use libp2p::{Multiaddr, PeerId, Swarm};
 use log::info;
 
 #[allow(unused)]
