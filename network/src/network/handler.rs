@@ -544,13 +544,13 @@ impl DecentNetworkBehaviour {
             if !config.server_mode {
                 let network_id = (config.boot_nodes).first().unwrap().network_id;
                 if let Either::Left(behaviour) = &mut swarm.behaviour_mut().rendezvous {
-                    behaviour
-                        .register(
-                            rendezvous::Namespace::from_static(RENDEZVOUS_NAMESPACE),
-                            network_id,
-                            None,
-                        )
-                        .unwrap();
+                    if let Err(err) = behaviour.register(
+                        rendezvous::Namespace::from_static(RENDEZVOUS_NAMESPACE),
+                        network_id,
+                        None,
+                    ) {
+                        error!("Failed to register for namespace : {:?}", err);
+                    }
                 }
             }
         }
